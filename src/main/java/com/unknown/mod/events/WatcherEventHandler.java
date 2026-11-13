@@ -2,15 +2,18 @@ package com.unknown.mod.events;
 
 import com.unknown.mod.entity.EntityWatcher;
 
+import net.minecraft.block.BlockDoor;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
+import net.minecraft.block.material.Material;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.RayTraceResult;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
@@ -91,7 +94,15 @@ public class WatcherEventHandler {
         Random random = player.world.rand;
 
         double distance = 45 + random.nextInt(26);
-        BlockPos pos = findPosition(player, distance, true, true);
+
+        // Иногда выбираем специальную точку: за стеклом или в открытом дверном проёме.
+        BlockPos pos = null;
+        if (random.nextInt(100) < 35) {
+            pos = findArchitecturalPosition(player, distance, true);
+        }
+        if (pos == null) {
+            pos = findPosition(player, distance, true, true);
+        }
 
         if (pos == null) return;
 
@@ -233,13 +244,18 @@ public class WatcherEventHandler {
 
         if (look.dotProduct(direction) < 0.94D) return false;
 
-        return player.world.rayTraceBlocks(
+        RayTraceResult hit = player.world.rayTraceBlocks(
                 eyes,
                 target,
                 false,
                 true,
                 false
-        ) == null;
+        );
+
+        // Стекло не должно полностью скрывать Наблюдателя от проверки взгляда.
+        return hit == null
+                || (hit.typeOfHit == RayTraceResult.Type.BLOCK
+                && player.world.getBlockState(hit.getBlockPos()).getMaterial() == Material.GLASS);
     }
 
     private BlockPos findPosition(
@@ -249,6 +265,12 @@ public class WatcherEventHandler {
             boolean avoidView
     ) {
         Random random = player.world.rand;
+
+        // При перемещении он тоже может выбрать окно или открытый дверной проём.
+        if (random.nextInt(100) < 20) {
+            BlockPos architectural = findArchitecturalPosition(player, distance, avoidView);
+            if (architectural != null) return architectural;
+        }
 
         double yaw = Math.toRadians(player.rotationYaw);
         double behindX = Math.sin(yaw);
@@ -298,7 +320,7 @@ public class WatcherEventHandler {
                 continue;
             }
 
-            // В большинстве случаев выбираем место рядом с деревом, стеной или скалой.
+            // Чаще выбираем позицию у ствола, стены или скалы, чтобы силуэт был частично скрыт.
             if (random.nextDouble() < 0.65D && !hasNearbyCover(player, pos)) continue;
 
             double centerX = pos.getX() + 0.5D;
@@ -327,6 +349,111 @@ public class WatcherEventHandler {
         }
 
         return null;
+    }
+
+    /**
+     * Ищет точку за окном или рядом с открытой дверью.
+     * Наблюдатель оказывается внутри строения, а игрок видит его через проём.
+     */
+    private BlockPos findArchitecturalPosition(
+            EntityPlayer player,
+            double distance,
+            boolean avoidView
+    ) {
+        Random random = player.world.rand;
+
+        for (int attempt = 0; attempt < 45; attempt++) {
+            double angle = random.nextDouble() * Math.PI * 2.0D;
+            int x = (int) Math.floor(player.posX + Math.cos(angle) * distance);
+            int z = (int) Math.floor(player.posZ + Math.sin(angle) * distance);
+
+            BlockPos surface = player.world.getTopSolidOrLiquidBlock(
+                    new BlockPos(x, player.posY, z)
+            );
+
+            if (!player.world.isBlockLoaded(surface)) continue;
+
+            int minY = Math.max(2, surface.getY() - 14);
+            int maxY = Math.min(player.world.getHeight() - 2, surface.getY() + 2);
+
+            for (int y = minY; y <= maxY; y++) {
+                BlockPos wall = new BlockPos(x, y, z);
+                IBlockState state = player.world.getBlockState(wall);
+
+                boolean window = state.getMaterial() == Material.GLASS;
+                boolean openDoor = state.getBlock() instanceof BlockDoor
+                        && state.getValue(BlockDoor.OPEN);
+
+                if (!window && !openDoor) continue;
+
+                double dx = wall.getX() + 0.5D - player.posX;
+                double dz = wall.getZ() + 0.5D - player.posZ;
+
+                EnumFacing awayFromPlayer;
+                if (Math.abs(dx) > Math.abs(dz)) {
+                    awayFromPlayer = dx > 0.0D ? EnumFacing.EAST : EnumFacing.WEST;
+                } else {
+                    awayFromPlayer = dz > 0.0D ? EnumFacing.SOUTH : EnumFacing.NORTH;
+                }
+
+                BlockPos standing = wall.offset(awayFromPlayer);
+
+                if (!isSafeStandingPosition(player, standing)) continue;
+
+                double px = standing.getX() + 0.5D;
+                double pz = standing.getZ() + 0.5D;
+                double actualDistance = Math.sqrt(
+                        (px - player.posX) * (px - player.posX)
+                                + (pz - player.posZ) * (pz - player.posZ)
+                );
+
+                if (actualDistance < 35.0D || actualDistance > 75.0D) continue;
+
+                if (avoidView) {
+                    Vec3d eyes = player.getPositionEyes(1.0F);
+                    Vec3d target = new Vec3d(px, standing.getY() + 0.9D, pz);
+                    Vec3d direction = target.subtract(eyes).normalize();
+                    if (player.getLook(1.0F).dotProduct(direction) > 0.75D) continue;
+                }
+
+                return standing;
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isSafeStandingPosition(EntityPlayer player, BlockPos pos) {
+        if (pos.getY() <= 1 || pos.getY() >= player.world.getHeight() - 2) return false;
+        if (!player.world.isBlockLoaded(pos)) return false;
+
+        BlockPos head = pos.up();
+        BlockPos ground = pos.down();
+
+        if (!player.world.isAirBlock(pos) || !player.world.isAirBlock(head)) return false;
+
+        IBlockState groundState = player.world.getBlockState(ground);
+        if (!groundState.isSideSolid(player.world, ground, EnumFacing.UP)) return false;
+        if (groundState.getMaterial().isLiquid()) return false;
+
+        if (groundState.getBlock() == Blocks.CACTUS
+                || groundState.getBlock() == Blocks.MAGMA
+                || groundState.getBlock() == Blocks.FIRE
+                || groundState.getBlock() == Blocks.LAVA
+                || groundState.getBlock() == Blocks.FLOWING_LAVA) {
+            return false;
+        }
+
+        AxisAlignedBB box = new AxisAlignedBB(
+                pos.getX() + 0.2D,
+                pos.getY(),
+                pos.getZ() + 0.2D,
+                pos.getX() + 0.8D,
+                pos.getY() + 1.8D,
+                pos.getZ() + 0.8D
+        );
+
+        return player.world.getCollisionBoxes(null, box).isEmpty();
     }
 
     private boolean hasNearbyCover(EntityPlayer player, BlockPos pos) {
