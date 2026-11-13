@@ -1,6 +1,8 @@
 
 package com.unknown.mod.events;
 
+import com.unknown.mod.events.MysteryProgression;
+
 import net.minecraft.block.BlockStandingSign;
 import net.minecraft.block.BlockTorch;
 import net.minecraft.init.Blocks;
@@ -51,13 +53,16 @@ public class AnomalyEventHandler {
         EntityPlayer player = event.player;
         Random random = player.world.rand;
 
+        int mysteryLevel = MysteryProgression.getLevel(player.world);
+        if (mysteryLevel <= 0) return; // В первый игровой день аномалий нет.
+
         int cooldown = player.getEntityData().getInteger(COOLDOWN_TAG);
 
         if (!player.getEntityData().hasKey(COOLDOWN_TAG)) {
 
             player.getEntityData().setInteger(
                     COOLDOWN_TAG,
-                    1200 + random.nextInt(1200)
+                    MysteryProgression.getAnomalyCooldown(random, mysteryLevel)
             );
 
             return;
@@ -73,11 +78,16 @@ public class AnomalyEventHandler {
             return;
         }
 
-        // Следующее событие через 2-5 минут.
+        // Интервал постепенно сокращается по мере развития мистики.
         player.getEntityData().setInteger(
                 COOLDOWN_TAG,
-                2400 + random.nextInt(3600)
+                MysteryProgression.getAnomalyCooldown(random, mysteryLevel)
         );
+
+        // Даже после окончания таймера событие может не произойти.
+        if (random.nextInt(100) >= MysteryProgression.getAnomalyChance(mysteryLevel)) {
+            return;
+        }
 
         // Выбираем случайную аномалию.
         int anomaly = random.nextInt(4);
