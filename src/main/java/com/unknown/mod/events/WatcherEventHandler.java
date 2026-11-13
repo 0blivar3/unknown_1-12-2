@@ -32,8 +32,9 @@ public class WatcherEventHandler {
     private static final String MOVE_DELAY_TAG = "unknown_move_delay";
     private static final String ENCOUNTERS_TAG = "unknown_watcher_encounters";
 
-    private static final int MIN_LIFETIME_TICKS = 20 * 60;
-    private static final int MAX_LIFETIME_TICKS = 20 * 120;
+    // Время жизни Наблюдателя: случайные 15–90 секунд.
+    private static final int MIN_LIFETIME_TICKS = 20 * 15;
+    private static final int MAX_LIFETIME_TICKS = 20 * 90;
 
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
