@@ -31,6 +31,8 @@ public class WatcherEventHandler {
     private static final String HIDDEN_TICKS_TAG = "unknown_hidden_ticks";
     private static final String MOVE_DELAY_TAG = "unknown_move_delay";
     private static final String ENCOUNTERS_TAG = "unknown_watcher_encounters";
+    private static final String LOOK_TICKS_TAG = "unknown_watcher_look_ticks";
+    private static final String LOOK_DESPAWN_DELAY_TAG = "unknown_watcher_look_delay";
 
     // Время жизни Наблюдателя: случайные 15–90 секунд.
     private static final int MIN_LIFETIME_TICKS = 20 * 15;
@@ -96,14 +98,8 @@ public class WatcherEventHandler {
 
         double distance = 45 + random.nextInt(26);
 
-        // Иногда выбираем специальную точку: за стеклом или в открытом дверном проёме.
-        BlockPos pos = null;
-        if (random.nextInt(100) < 35) {
-            pos = findArchitecturalPosition(player, distance, true);
-        }
-        if (pos == null) {
-            pos = findPosition(player, distance, true, true);
-        }
+        // Выбираем необычный сценарий появления: лес, возвышенность, архитектура или укрытие.
+        BlockPos pos = findUnexpectedPosition(player, distance, true);
 
         if (pos == null) return;
 
@@ -130,6 +126,11 @@ public class WatcherEventHandler {
         watcher.getEntityData().setInteger(
                 MOVE_DELAY_TAG,
                 60 + random.nextInt(101)
+        );
+        watcher.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
+        watcher.getEntityData().setInteger(
+                LOOK_DESPAWN_DELAY_TAG,
+                4 + random.nextInt(13)
         );
 
         if (player.world.spawnEntity(watcher)) {
@@ -170,9 +171,19 @@ public class WatcherEventHandler {
         facePlayer((EntityLiving) entity, player);
 
         if (canPlayerSee(player, entity)) {
+            int lookTicks = entity.getEntityData().getInteger(LOOK_TICKS_TAG) + 1;
+            entity.getEntityData().setInteger(LOOK_TICKS_TAG, lookTicks);
             entity.getEntityData().setInteger(HIDDEN_TICKS_TAG, 0);
+
+            int lookDelay = entity.getEntityData().getInteger(LOOK_DESPAWN_DELAY_TAG);
+            if (lookTicks >= lookDelay) {
+                entity.setDead();
+            }
             return;
         }
+
+        // Если игрок отвёл взгляд до конца задержки, Наблюдатель остаётся.
+        entity.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
 
         int hiddenTicks = entity.getEntityData().getInteger(HIDDEN_TICKS_TAG) + 1;
         entity.getEntityData().setInteger(HIDDEN_TICKS_TAG, hiddenTicks);
@@ -183,10 +194,9 @@ public class WatcherEventHandler {
         if (hiddenTicks < moveDelay) return;
 
         Random random = entity.world.rand;
-        BlockPos newPos = findPosition(
+        BlockPos newPos = findUnexpectedPosition(
                 player,
                 35 + random.nextInt(26),
-                false,
                 true
         );
 
@@ -257,6 +267,136 @@ public class WatcherEventHandler {
         return hit == null
                 || (hit.typeOfHit == RayTraceResult.Type.BLOCK
                 && player.world.getBlockState(hit.getBlockPos()).getMaterial() == Material.GLASS);
+    }
+
+    /**
+     * Выбирает один из нескольких сценариев появления, чтобы Наблюдатель
+     * не всегда оказывался просто в случайной точке за спиной.
+     */
+    private BlockPos findUnexpectedPosition(
+            EntityPlayer player,
+            double distance,
+            boolean avoidView
+    ) {
+        Random random = player.world.rand;
+        int scenario = random.nextInt(100);
+        BlockPos pos = null;
+
+        if (scenario < 25) {
+            pos = findTreePosition(player, distance, avoidView);
+        } else if (scenario < 45) {
+            pos = findElevatedPosition(player, distance, avoidView);
+        } else if (scenario < 65) {
+            pos = findArchitecturalPosition(player, distance, avoidView);
+        }
+
+        if (pos == null) {
+            pos = findPosition(player, distance, true, avoidView);
+        }
+
+        return pos;
+    }
+
+    /**
+     * Ищет безопасную точку рядом с деревьями — например, между стволами
+     * или на краю лесной поляны.
+     */
+    private BlockPos findTreePosition(
+            EntityPlayer player,
+            double distance,
+            boolean avoidView
+    ) {
+        Random random = player.world.rand;
+
+        for (int attempt = 0; attempt < 35; attempt++) {
+            double angle = random.nextDouble() * Math.PI * 2.0D;
+            int x = (int) Math.floor(player.posX + Math.cos(angle) * distance);
+            int z = (int) Math.floor(player.posZ + Math.sin(angle) * distance);
+
+            BlockPos pos = player.world.getTopSolidOrLiquidBlock(
+                    new BlockPos(x, player.posY, z)
+            );
+
+            if (!player.world.isBlockLoaded(pos)) continue;
+            if (Math.abs(pos.getY() - player.posY) > 8.0D) continue;
+            if (!isSafeStandingPosition(player, pos)) continue;
+            if (!hasNearbyTree(player, pos)) continue;
+            if (!isOutsidePlayerView(player, pos, avoidView)) continue;
+
+            return pos;
+        }
+
+        return null;
+    }
+
+    /**
+     * Ищет точку на холме или другом естественном возвышении.
+     */
+    private BlockPos findElevatedPosition(
+            EntityPlayer player,
+            double distance,
+            boolean avoidView
+    ) {
+        Random random = player.world.rand;
+
+        for (int attempt = 0; attempt < 45; attempt++) {
+            double angle = random.nextDouble() * Math.PI * 2.0D;
+            int x = (int) Math.floor(player.posX + Math.cos(angle) * distance);
+            int z = (int) Math.floor(player.posZ + Math.sin(angle) * distance);
+
+            BlockPos pos = player.world.getTopSolidOrLiquidBlock(
+                    new BlockPos(x, player.posY, z)
+            );
+
+            if (!player.world.isBlockLoaded(pos)) continue;
+
+            double heightDifference = pos.getY() - player.posY;
+            if (heightDifference < 3.0D || heightDifference > 12.0D) continue;
+            if (!isSafeStandingPosition(player, pos)) continue;
+            if (!hasNearbyCover(player, pos)) continue;
+            if (!isOutsidePlayerView(player, pos, avoidView)) continue;
+
+            return pos;
+        }
+
+        return null;
+    }
+
+    private boolean hasNearbyTree(EntityPlayer player, BlockPos pos) {
+        for (int x = -3; x <= 3; x++) {
+            for (int z = -3; z <= 3; z++) {
+                for (int y = -1; y <= 4; y++) {
+                    IBlockState state = player.world.getBlockState(
+                            pos.add(x, y, z)
+                    );
+                    Material material = state.getMaterial();
+
+                    if (material == Material.LEAVES || material == Material.WOOD) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isOutsidePlayerView(
+            EntityPlayer player,
+            BlockPos pos,
+            boolean avoidView
+    ) {
+        if (!avoidView) return true;
+
+        Vec3d eyes = player.getPositionEyes(1.0F);
+        Vec3d target = new Vec3d(
+                pos.getX() + 0.5D,
+                pos.getY() + 0.9D,
+                pos.getZ() + 0.5D
+        );
+        Vec3d direction = target.subtract(eyes).normalize();
+
+        return player.getLook(1.0F).dotProduct(direction) <= 0.75D;
     }
 
     private BlockPos findPosition(
