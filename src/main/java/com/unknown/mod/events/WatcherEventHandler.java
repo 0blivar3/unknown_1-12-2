@@ -17,7 +17,6 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 import java.util.List;
 import java.util.Random;
-import java.util.UUID;
 
 public class WatcherEventHandler {
 
@@ -28,6 +27,7 @@ public class WatcherEventHandler {
     private static final String COOLDOWN_TAG = "unknown_watcher_cooldown";
     private static final String HIDDEN_TICKS_TAG = "unknown_hidden_ticks";
     private static final String MOVE_DELAY_TAG = "unknown_move_delay";
+    private static final String ENCOUNTERS_TAG = "unknown_watcher_encounters";
 
     private static final int MIN_LIFETIME_TICKS = 20 * 60;
     private static final int MAX_LIFETIME_TICKS = 20 * 120;
@@ -60,10 +60,13 @@ public class WatcherEventHandler {
                 900 + random.nextInt(900)
         );
 
-        // Не создаём второго Наблюдателя для того же игрока.
         if (hasActiveWatcher(player)) return;
 
-        if (random.nextInt(2) == 0) {
+        // Чем больше встреч было раньше, тем вероятнее следующая.
+        int encounters = player.getEntityData().getInteger(ENCOUNTERS_TAG);
+        int spawnChance = Math.min(85, 50 + encounters * 5);
+
+        if (random.nextInt(100) < spawnChance) {
             spawnWatcher(player);
         }
     }
@@ -95,6 +98,12 @@ public class WatcherEventHandler {
         EntityWatcher watcher = new EntityWatcher(player.world);
         watcher.setPosition(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
 
+        // Корпус остаётся повёрнутым в сторону, а голова сможет следить за игроком.
+        float bodyYaw = random.nextFloat() * 360.0F;
+        watcher.rotationYaw = bodyYaw;
+        watcher.renderYawOffset = bodyYaw;
+        watcher.rotationYawHead = bodyYaw;
+
         watcher.getEntityData().setBoolean(WATCHER_TAG, true);
         watcher.getEntityData().setString(
                 OWNER_TAG,
@@ -111,7 +120,10 @@ public class WatcherEventHandler {
                 60 + random.nextInt(101)
         );
 
-        player.world.spawnEntity(watcher);
+        if (player.world.spawnEntity(watcher)) {
+            player.getEntityData().setInteger(ENCOUNTERS_TAG,
+                    player.getEntityData().getInteger(ENCOUNTERS_TAG) + 1);
+        }
     }
 
     @SubscribeEvent
@@ -122,7 +134,6 @@ public class WatcherEventHandler {
         if (!(entity instanceof EntityWatcher)) return;
         if (!entity.getEntityData().getBoolean(WATCHER_TAG)) return;
 
-        // Время жизни отсчитывается независимо от того, рядом ли игрок.
         int age = entity.getEntityData().getInteger(AGE_TAG) + 1;
         entity.getEntityData().setInteger(AGE_TAG, age);
 
@@ -134,7 +145,6 @@ public class WatcherEventHandler {
 
         EntityPlayer player = findOwner(entity);
         if (player == null) {
-            // Не оставляем бесхозную сущность после выхода владельца.
             entity.setDead();
             return;
         }
@@ -144,6 +154,7 @@ public class WatcherEventHandler {
             return;
         }
 
+        // Поворачивается только голова: корпус не дёргается вслед за игроком.
         facePlayer((EntityLiving) entity, player);
 
         if (canPlayerSee(player, entity)) {
@@ -200,10 +211,7 @@ public class WatcherEventHandler {
         double dz = player.posZ - watcher.posZ;
 
         float yaw = (float) (Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0F;
-
-        watcher.rotationYaw = yaw;
         watcher.rotationYawHead = yaw;
-        watcher.renderYawOffset = yaw;
     }
 
     private boolean canPlayerSee(EntityPlayer player, Entity watcher) {
@@ -223,10 +231,8 @@ public class WatcherEventHandler {
 
         direction = direction.normalize();
 
-        // Угол обзора около 40 градусов от центра взгляда.
         if (look.dotProduct(direction) < 0.94D) return false;
 
-        // Луч не должен упираться в блок между игроком и Наблюдателем.
         return player.world.rayTraceBlocks(
                 eyes,
                 target,
@@ -244,17 +250,15 @@ public class WatcherEventHandler {
     ) {
         Random random = player.world.rand;
 
-        // Горизонтальное направление строго назад относительно поворота игрока.
         double yaw = Math.toRadians(player.rotationYaw);
         double behindX = Math.sin(yaw);
         double behindZ = -Math.cos(yaw);
         double behindAngle = Math.atan2(behindZ, behindX);
 
-        for (int attempt = 0; attempt < 50; attempt++) {
+        for (int attempt = 0; attempt < 70; attempt++) {
             double angle;
 
             if (preferBehind && random.nextDouble() < 0.70D) {
-                // 70% попыток — сектор позади игрока (примерно +/- 60 градусов).
                 angle = behindAngle + (random.nextDouble() - 0.5D)
                         * (Math.PI / 3.0D);
             } else {
@@ -294,6 +298,9 @@ public class WatcherEventHandler {
                 continue;
             }
 
+            // В большинстве случаев выбираем место рядом с деревом, стеной или скалой.
+            if (random.nextDouble() < 0.65D && !hasNearbyCover(player, pos)) continue;
+
             double centerX = pos.getX() + 0.5D;
             double centerZ = pos.getZ() + 0.5D;
 
@@ -313,7 +320,6 @@ public class WatcherEventHandler {
                 Vec3d target = new Vec3d(centerX, pos.getY() + 0.9D, centerZ);
                 Vec3d direction = target.subtract(eyes).normalize();
 
-                // Не появляться в центре экрана или непосредственно перед игроком.
                 if (player.getLook(1.0F).dotProduct(direction) > 0.75D) continue;
             }
 
@@ -321,5 +327,27 @@ public class WatcherEventHandler {
         }
 
         return null;
+    }
+
+    private boolean hasNearbyCover(EntityPlayer player, BlockPos pos) {
+        BlockPos[] sides = new BlockPos[] {
+                pos.north(),
+                pos.south(),
+                pos.east(),
+                pos.west(),
+                pos.north().up(),
+                pos.south().up(),
+                pos.east().up(),
+                pos.west().up()
+        };
+
+        for (BlockPos side : sides) {
+            IBlockState state = player.world.getBlockState(side);
+            if (state.getMaterial().blocksMovement()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
