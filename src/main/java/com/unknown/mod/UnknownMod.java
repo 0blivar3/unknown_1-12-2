@@ -51,7 +51,7 @@ public class UnknownMod {
                 "Watcher",
                 1,
                 this,
-                96,
+                192,
                 1,
                 true
         );
