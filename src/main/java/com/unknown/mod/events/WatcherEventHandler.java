@@ -1,6 +1,7 @@
 package com.unknown.mod.events;
 
 import com.unknown.mod.entity.EntityWatcher;
+import com.unknown.mod.events.MysteryProgression;
 
 import net.minecraft.block.BlockDoor;
 import net.minecraft.block.state.IBlockState;
@@ -45,12 +46,16 @@ public class WatcherEventHandler {
         EntityPlayer player = event.player;
         if (player.world.isRemote) return;
 
+        int mysteryLevel = MysteryProgression.getLevel(player.world);
+        if (mysteryLevel <= 0) return; // Первый игровой день полностью безопасен.
+
+        Random random = player.world.rand;
         int cooldown = player.getEntityData().getInteger(COOLDOWN_TAG);
 
         if (!player.getEntityData().hasKey(COOLDOWN_TAG)) {
             player.getEntityData().setInteger(
                     COOLDOWN_TAG,
-                    200 + player.world.rand.nextInt(200)
+                    MysteryProgression.getWatcherCooldown(random, mysteryLevel)
             );
             return;
         }
@@ -60,20 +65,19 @@ public class WatcherEventHandler {
             return;
         }
 
-        Random random = player.world.rand;
         player.getEntityData().setInteger(
                 COOLDOWN_TAG,
-                900 + random.nextInt(900)
+                MysteryProgression.getWatcherCooldown(random, mysteryLevel)
         );
 
         if (hasActiveWatcher(player)) return;
 
         // Чем больше встреч было раньше, тем вероятнее следующая.
         int encounters = player.getEntityData().getInteger(ENCOUNTERS_TAG);
-        int spawnChance = Math.min(85, 50 + encounters * 5);
+        int spawnChance = MysteryProgression.getWatcherChance(mysteryLevel, encounters);
 
         if (random.nextInt(100) < spawnChance) {
-            spawnWatcher(player);
+            spawnWatcher(player, mysteryLevel);
         }
     }
 
@@ -93,10 +97,11 @@ public class WatcherEventHandler {
         return false;
     }
 
-    private void spawnWatcher(EntityPlayer player) {
+    private void spawnWatcher(EntityPlayer player, int mysteryLevel) {
         Random random = player.world.rand;
 
-        double distance = 45 + random.nextInt(26);
+        // С каждым этапом Наблюдатель держится всё дальше от игрока.
+        double distance = MysteryProgression.getWatcherSpawnDistance(random, mysteryLevel);
 
         // Выбираем необычный сценарий появления: лес, возвышенность, архитектура или укрытие.
         BlockPos pos = findUnexpectedPosition(player, distance, true);
@@ -196,7 +201,8 @@ public class WatcherEventHandler {
         Random random = entity.world.rand;
         BlockPos newPos = findUnexpectedPosition(
                 player,
-                35 + random.nextInt(26),
+                MysteryProgression.getWatcherRelocationDistance(random,
+                        MysteryProgression.getLevel(player.world)),
                 true
         );
 
