@@ -217,18 +217,42 @@ public class WatcherEventHandler {
         }
 
         if (newPos != null) {
-            entity.setPositionAndUpdate(
-                    newPos.getX() + 0.5D,
-                    newPos.getY(),
-                    newPos.getZ() + 0.5D
-            );
+            relocateWatcher(entity, newPos);
+            return;
         }
 
-        entity.getEntityData().setInteger(HIDDEN_TICKS_TAG, 0);
-        entity.getEntityData().setInteger(
-                MOVE_DELAY_TAG,
-                60 + random.nextInt(101)
+        // Если безопасное место не найдено, не сбрасываем скрытый таймер:
+        // попробуем поискать снова через короткую паузу.
+        entity.getEntityData().setInteger(HIDDEN_TICKS_TAG, Math.max(0, moveDelay - 20));
+        entity.getEntityData().setInteger(MOVE_DELAY_TAG, moveDelay);
+    }
+
+    /**
+     * Пересоздаёт сущность на новой позиции вместо обычного телепорта.
+     * Клиент получает удаление старого Watcher и появление нового на месте,
+     * поэтому интерполяция не рисует его путь сквозь стены и блоки.
+     */
+    private void relocateWatcher(Entity oldWatcher, BlockPos newPos) {
+        EntityWatcher replacement = new EntityWatcher(oldWatcher.world);
+
+        replacement.setPosition(
+                newPos.getX() + 0.5D,
+                newPos.getY(),
+                newPos.getZ() + 0.5D
         );
+
+        replacement.rotationYaw = oldWatcher.rotationYaw;
+        replacement.prevRotationYaw = oldWatcher.prevRotationYaw;
+        replacement.renderYawOffset = oldWatcher.renderYawOffset;
+        replacement.rotationYawHead = oldWatcher.rotationYawHead;
+        replacement.setHealth(((EntityLiving) oldWatcher).getHealth());
+
+        // Переносим владельца, время жизни, задержки и счётчики без изменений.
+        replacement.getEntityData().merge(oldWatcher.getEntityData().copy());
+
+        if (oldWatcher.world.spawnEntity(replacement)) {
+            oldWatcher.setDead();
+        }
     }
 
     private EntityPlayer findOwner(Entity watcher) {
