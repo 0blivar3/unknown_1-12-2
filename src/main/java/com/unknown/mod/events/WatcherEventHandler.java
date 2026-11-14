@@ -100,11 +100,16 @@ public class WatcherEventHandler {
     private void spawnWatcher(EntityPlayer player, int mysteryLevel) {
         Random random = player.world.rand;
 
-        // С каждым этапом Наблюдатель держится всё дальше от игрока.
-        double distance = MysteryProgression.getWatcherSpawnDistance(random, mysteryLevel);
+        BlockPos pos;
 
-        // Выбираем необычный сценарий появления: лес, возвышенность, архитектура или укрытие.
-        BlockPos pos = findUnexpectedPosition(player, distance, true);
+        // В пещерах используется отдельный поиск: наземные координаты здесь не подходят.
+        if (CaveWatcherBehavior.isPlayerInCave(player)) {
+            pos = CaveWatcherBehavior.findPosition(player, 18.0D, 38.0D);
+        } else {
+            double distance = MysteryProgression.getWatcherSpawnDistance(random, mysteryLevel);
+            // Лес, возвышенность, архитектура или укрытие.
+            pos = findUnexpectedPosition(player, distance, true);
+        }
 
         if (pos == null) return;
 
@@ -198,12 +203,18 @@ public class WatcherEventHandler {
         if (hiddenTicks < moveDelay) return;
 
         Random random = entity.world.rand;
-        BlockPos newPos = findUnexpectedPosition(
-                player,
-                MysteryProgression.getWatcherRelocationDistance(random,
-                        MysteryProgression.getLevel(player.world)),
-                true
-        );
+        BlockPos newPos;
+
+        if (CaveWatcherBehavior.isPlayerInCave(player)) {
+            newPos = CaveWatcherBehavior.findPosition(player, 18.0D, 38.0D);
+        } else {
+            newPos = findUnexpectedPosition(
+                    player,
+                    MysteryProgression.getWatcherRelocationDistance(
+                            random, MysteryProgression.getLevel(player.world)),
+                    true
+            );
+        }
 
         if (newPos != null) {
             entity.setPositionAndUpdate(
