@@ -365,6 +365,7 @@ public class AnomalyEventHandler {
         int affected = behavior == 1 ? 1 : Math.min(candidates.size(), 1 + random.nextInt(3));
 
         // Одна воображаемая точка заставляет несколько животных смотреть строго в одном направлении.
+        double sharedAngle = random.nextDouble() * Math.PI * 2.0D;
         double focusX = player.posX + (random.nextDouble() - 0.5D) * 18.0D;
         double focusZ = player.posZ + (random.nextDouble() - 0.5D) * 18.0D;
 
@@ -378,8 +379,8 @@ public class AnomalyEventHandler {
             switch (behavior) {
                 case 0:
                     // Все выбранные животные смотрят в одну случайную сторону.
-                    dx = Math.cos(focusX);
-                    dz = Math.sin(focusZ);
+                    dx = Math.cos(sharedAngle);
+                    dz = Math.sin(sharedAngle);
                     break;
                 case 1:
                     // Одно животное неподвижно смотрит прямо на игрока.
