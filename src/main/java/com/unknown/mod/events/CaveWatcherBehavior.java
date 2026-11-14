@@ -43,7 +43,7 @@ public final class CaveWatcherBehavior {
         World world = player.world;
         Random random = world.rand;
 
-        for (int attempt = 0; attempt < 180; attempt++) {
+        for (int attempt = 0; attempt < 90; attempt++) {
             double angle = random.nextDouble() * Math.PI * 2.0D;
             double distance = minDistance + random.nextDouble() * (maxDistance - minDistance);
 
