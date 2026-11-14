@@ -247,8 +247,14 @@ public class WatcherEventHandler {
         replacement.rotationYawHead = oldWatcher.rotationYawHead;
         replacement.setHealth(((EntityLiving) oldWatcher).getHealth());
 
-        // Переносим владельца, время жизни, задержки и счётчики без изменений.
+        // Переносим владельца, время жизни и счётчики, но начинаем новый цикл скрытого перемещения.
         replacement.getEntityData().merge(oldWatcher.getEntityData().copy());
+        replacement.getEntityData().setInteger(HIDDEN_TICKS_TAG, 0);
+        replacement.getEntityData().setInteger(
+                MOVE_DELAY_TAG,
+                60 + oldWatcher.world.rand.nextInt(101)
+        );
+        replacement.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
 
         if (oldWatcher.world.spawnEntity(replacement)) {
             oldWatcher.setDead();
