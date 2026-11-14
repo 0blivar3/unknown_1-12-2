@@ -36,7 +36,15 @@ public class AnomalyEventHandler {
 
     private static final String[] SIGN_MESSAGES = {
             "I SEE YOU", "DON'T LOOK", "TURN BACK", "HELP ME",
-            "...", "HE IS HERE", "RUN"
+            "...", "HE IS HERE", "RUN", "NOT ALONE",
+            "BEHIND YOU", "STAY QUIET", "GO HOME", "NO ESCAPE",
+            "WHY HERE?", "WAKE UP", "WRONG WORLD", "IT KNOWS",
+            "STILL HERE", "KEEP WALKING", "DONT MOVE", "LISTEN",
+            "COME CLOSER", "TOO LATE", "I REMEMBER", "LOOK UP",
+            "NOT REAL", "YOU LEFT ME", "WHERE AM I", "HIDE",
+            "NO ONE CAME", "ITS WATCHING", "TURN AROUND", "FORGIVE ME",
+            "DONT TRUST", "I HEAR YOU", "FOUND YOU", "GO DEEPER",
+            "ONE MORE DAY", "WHY ME?", "ITS INSIDE", "NEVER SLEEP"
     };
 
     private static class TemporaryBlock {
@@ -287,14 +295,45 @@ public class AnomalyEventHandler {
         World world = player.world;
         Random random = world.rand;
 
+        // В пещерах оставляем глухую атмосферу, а на поверхности используем
+        // редкие звуки, которые могут показаться обычным шумом окружения.
+        boolean underground = !world.canSeeSky(player.getPosition());
+
         double angle = random.nextDouble() * Math.PI * 2.0D;
-        double distance = 12 + random.nextInt(15);
+        double distance = 14.0D + random.nextInt(19);
         double x = player.posX + Math.cos(angle) * distance;
         double z = player.posZ + Math.sin(angle) * distance;
         BlockPos pos = world.getTopSolidOrLiquidBlock(new BlockPos(x, player.posY, z));
 
-        world.playSound(null, pos, SoundEvents.AMBIENT_CAVE,
-                SoundCategory.AMBIENT, 0.8F, 0.7F + random.nextFloat() * 0.5F);
+        if (!world.isBlockLoaded(pos)) return;
+
+        if (underground) {
+            world.playSound(null, pos, SoundEvents.AMBIENT_CAVE,
+                    SoundCategory.AMBIENT, 0.65F, 1.0F);
+            return;
+        }
+
+        // Не каждый звук должен быть одинаковым: иногда это скрип,
+        // иногда тяжёлый шаг или тихий удар издалека.
+        int sound = random.nextInt(4);
+        switch (sound) {
+            case 0:
+                world.playSound(null, pos, SoundEvents.AMBIENT_CAVE,
+                        SoundCategory.AMBIENT, 0.55F, 1.0F);
+                break;
+            case 1:
+                world.playSound(null, pos, SoundEvents.BLOCK_WOODEN_DOOR_OPEN,
+                        SoundCategory.BLOCKS, 0.45F, 1.0F);
+                break;
+            case 2:
+                world.playSound(null, pos, SoundEvents.BLOCK_STONE_STEP,
+                        SoundCategory.BLOCKS, 0.35F, 1.0F);
+                break;
+            default:
+                world.playSound(null, pos, SoundEvents.BLOCK_WOOD_STEP,
+                        SoundCategory.BLOCK_BLOCKS, 0.4F, 1.0F);
+                break;
+        }
     }
 
     private void playFootsteps(EntityPlayer player) {
@@ -309,7 +348,7 @@ public class AnomalyEventHandler {
             BlockPos pos = world.getTopSolidOrLiquidBlock(new BlockPos(x, player.posY, z));
 
             world.playSound(null, pos, SoundEvents.BLOCK_GRASS_STEP,
-                    SoundCategory.BLOCKS, 0.45F, 0.65F + random.nextFloat() * 0.5F);
+                    SoundCategory.BLOCKS, 0.45F, 1.0F);
         }
     }
 
