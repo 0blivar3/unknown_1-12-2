@@ -4,6 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockDoor;
 import net.minecraft.block.BlockStandingSign;
 import net.minecraft.block.BlockTorch;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.passive.EntityHorse;
 import net.minecraft.entity.player.EntityPlayer;
@@ -12,6 +13,7 @@ import net.minecraft.init.Blocks;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.tileentity.TileEntitySign;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
@@ -83,11 +85,11 @@ public class AnomalyEventHandler {
 
     private static class TemporaryBlock {
         private int ticks;
-        private final Block expectedBlock;
+        private final IBlockState expectedState;
 
-        private TemporaryBlock(int ticks, Block expectedBlock) {
+        private TemporaryBlock(int ticks, IBlockState expectedState) {
             this.ticks = ticks;
-            this.expectedBlock = expectedBlock;
+            this.expectedState = expectedState;
         }
     }
 
@@ -129,7 +131,7 @@ public class AnomalyEventHandler {
 
         // Новые события открываются постепенно: день 2 — первые два,
         // день 3 — дверь и животные, день 4 — исчезновение животных.
-        int anomalyCount = mysteryLevel == 1 ? 6 : (mysteryLevel == 2 ? 8 : 9);
+        int anomalyCount = mysteryLevel == 1 ? 6 : (mysteryLevel == 2 ? 8 : 10);
         int anomaly = random.nextInt(anomalyCount);
 
         switch (anomaly) {
@@ -142,6 +144,7 @@ public class AnomalyEventHandler {
             case 6: openNearbyDoor(player); break;
             case 7: disturbPeacefulAnimals(player); break;
             case 8: makeAnimalDisappear(player); break;
+            case 9: playDistantGhastScream(player); break;
             default: break;
         }
     }
@@ -173,15 +176,88 @@ public class AnomalyEventHandler {
         }
     }
 
+    // Факел появляется в естественном, тёмном месте вдали от построек и других источников света.
     private void spawnTorch(EntityPlayer player) {
         World world = player.world;
-        BlockPos pos = findPosition(player);
+        BlockPos pos = findTorchPosition(player);
         if (pos == null) return;
 
         if (world.setBlockState(pos,
                 Blocks.TORCH.getDefaultState().withProperty(BlockTorch.FACING, EnumFacing.UP), 3)) {
-            registerTemporaryBlock(world, pos, 600 + world.rand.nextInt(300));
+            registerTemporaryBlock(world, pos, 1200 + world.rand.nextInt(1201));
         }
+    }
+
+    private BlockPos findTorchPosition(EntityPlayer player) {
+        World world = player.world;
+        Random random = world.rand;
+
+        for (int attempt = 0; attempt < 35; attempt++) {
+            double angle = random.nextDouble() * Math.PI * 2.0D;
+            double distance = 10.0D + random.nextDouble() * 14.0D;
+            int x = (int) Math.floor(player.posX + Math.cos(angle) * distance);
+            int z = (int) Math.floor(player.posZ + Math.sin(angle) * distance);
+            BlockPos pos = world.getTopSolidOrLiquidBlock(new BlockPos(x, player.posY, z));
+
+            if (!world.isBlockLoaded(pos) || !world.isAirBlock(pos)) continue;
+            if (Math.abs(pos.getY() - player.posY) > 10.0D) continue;
+
+            IBlockState floor = world.getBlockState(pos.down());
+            if (!floor.getMaterial().blocksMovement() || floor.getMaterial().isLiquid()) continue;
+
+            // Не ставим факел на искусственные полы и рядом с базами.
+            Block floorBlock = floor.getBlock();
+            if (floorBlock == Blocks.PLANKS || floorBlock == Blocks.COBBLESTONE
+                    || floorBlock == Blocks.MOSSY_COBBLESTONE
+                    || floorBlock == Blocks.BRICK_BLOCK
+                    || floorBlock == Blocks.STONEBRICK
+                    || floorBlock == Blocks.CRAFTING_TABLE
+                    || floorBlock == Blocks.FURNACE
+                    || floorBlock == Blocks.CHEST) continue;
+
+            if (world.getLightFor(EnumSkyBlock.BLOCK, pos) > 4) continue;
+            if (hasNearbyTorch(world, pos, 7)) continue;
+            if (hasNearbyPlayerStructure(world, pos, 4)) continue;
+
+            return pos;
+        }
+
+        return null;
+    }
+
+    private boolean hasNearbyTorch(World world, BlockPos center, int radius) {
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -3; y <= 3; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    BlockPos check = center.add(x, y, z);
+                    if (!world.isBlockLoaded(check)) continue;
+                    if (world.getBlockState(check).getBlock() instanceof BlockTorch) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean hasNearbyPlayerStructure(World world, BlockPos center, int radius) {
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -2; y <= 3; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    BlockPos check = center.add(x, y, z);
+                    if (!world.isBlockLoaded(check)) continue;
+
+                    Block block = world.getBlockState(check).getBlock();
+                    if (block == Blocks.PLANKS || block == Blocks.COBBLESTONE
+                            || block == Blocks.MOSSY_COBBLESTONE
+                            || block == Blocks.CRAFTING_TABLE || block == Blocks.FURNACE
+                            || block == Blocks.CHEST || block == Blocks.STANDING_SIGN
+                            || block == Blocks.WALL_SIGN || block == Blocks.GLASS
+                            || block == Blocks.GLASS_PANE || block instanceof BlockDoor) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     // Один блок в месте, где он совершенно неуместен.
@@ -265,44 +341,72 @@ public class AnomalyEventHandler {
         }
     }
 
-    // Животные внезапно замирают или одновременно смотрят в одну сторону.
+    // Животные иногда синхронно замирают, смотрят на игрока или на одну пустую точку.
     private void disturbPeacefulAnimals(EntityPlayer player) {
         World world = player.world;
         List<EntityAnimal> candidates = new ArrayList<>();
 
         for (EntityAnimal animal : world.getEntitiesWithinAABB(
-                EntityAnimal.class, player.getEntityBoundingBox().grow(20.0D, 6.0D, 20.0D))) {
+                EntityAnimal.class, player.getEntityBoundingBox().grow(22.0D, 7.0D, 22.0D))) {
 
             if (animal.isDead || animal instanceof EntityTameable || animal instanceof EntityHorse) {
                 continue;
             }
 
             double distanceSq = animal.getDistanceSq(player);
-            if (distanceSq < 64.0D || distanceSq > 400.0D) continue;
+            if (distanceSq < 64.0D || distanceSq > 484.0D) continue;
             candidates.add(animal);
         }
 
         if (candidates.isEmpty()) return;
 
         Random random = world.rand;
-        float strangeYaw = random.nextFloat() * 360.0F;
-        int affected = Math.min(candidates.size(), 1 + random.nextInt(3));
+        int behavior = random.nextInt(5);
+        int affected = behavior == 1 ? 1 : Math.min(candidates.size(), 1 + random.nextInt(3));
+
+        // Одна воображаемая точка заставляет несколько животных смотреть строго в одном направлении.
+        double focusX = player.posX + (random.nextDouble() - 0.5D) * 18.0D;
+        double focusZ = player.posZ + (random.nextDouble() - 0.5D) * 18.0D;
 
         for (int i = 0; i < affected; i++) {
-            EntityAnimal animal = candidates.get(random.nextInt(candidates.size()));
-            candidates.remove(animal);
-
+            EntityAnimal animal = candidates.remove(random.nextInt(candidates.size()));
             animal.getNavigator().clearPath();
 
-            if (random.nextBoolean()) {
-                double dx = player.posX - animal.posX;
-                double dz = player.posZ - animal.posZ;
-                strangeYaw = (float) (Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0F;
+            double dx;
+            double dz;
+
+            switch (behavior) {
+                case 0:
+                    // Все выбранные животные смотрят в одну случайную сторону.
+                    dx = Math.cos(focusX);
+                    dz = Math.sin(focusZ);
+                    break;
+                case 1:
+                    // Одно животное неподвижно смотрит прямо на игрока.
+                    dx = player.posX - animal.posX;
+                    dz = player.posZ - animal.posZ;
+                    break;
+                case 2:
+                    // Животные смотрят в одну точку, где ничего нет.
+                    dx = focusX - animal.posX;
+                    dz = focusZ - animal.posZ;
+                    break;
+                case 3:
+                    // Животные отворачиваются от игрока.
+                    dx = animal.posX - player.posX;
+                    dz = animal.posZ - player.posZ;
+                    break;
+                default:
+                    // Несколько животных одновременно поворачиваются к игроку.
+                    dx = player.posX - animal.posX;
+                    dz = player.posZ - animal.posZ;
+                    break;
             }
 
-            animal.rotationYaw = strangeYaw;
-            animal.rotationYawHead = strangeYaw;
-            animal.renderYawOffset = strangeYaw;
+            float yaw = (float) (Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0F;
+            animal.rotationYaw = yaw;
+            animal.rotationYawHead = yaw;
+            animal.renderYawOffset = yaw;
         }
     }
 
@@ -377,6 +481,32 @@ public class AnomalyEventHandler {
         }
     }
 
+    // Очень далёкий крик без появления самого гаста.
+    private void playDistantGhastScream(EntityPlayer player) {
+        World world = player.world;
+        Random random = world.rand;
+
+        double angle = random.nextDouble() * Math.PI * 2.0D;
+        double distance = 24.0D + random.nextDouble() * 13.0D;
+        int x = (int) Math.floor(player.posX + Math.cos(angle) * distance);
+        int z = (int) Math.floor(player.posZ + Math.sin(angle) * distance);
+
+        int y;
+        if (world.canSeeSky(player.getPosition())) {
+            BlockPos surface = world.getTopSolidOrLiquidBlock(new BlockPos(x, player.posY, z));
+            y = surface.getY();
+        } else {
+            y = Math.max(5, Math.min(world.getHeight() - 2,
+                    (int) Math.floor(player.posY + random.nextInt(13) - 6)));
+        }
+
+        BlockPos soundPos = new BlockPos(x, y, z);
+        if (!world.isBlockLoaded(soundPos)) return;
+
+        world.playSound(null, soundPos, SoundEvents.ENTITY_GHAST_SCREAM,
+                SoundCategory.HOSTILE, 2.0F, 0.78F + random.nextFloat() * 0.28F);
+    }
+
     private void playFootsteps(EntityPlayer player) {
         World world = player.world;
         Random random = world.rand;
@@ -420,7 +550,7 @@ public class AnomalyEventHandler {
         Block expectedBlock = world.getBlockState(pos).getBlock();
 
         temporaryBlocks.computeIfAbsent(dimension, key -> new HashMap<>())
-                .put(pos, new TemporaryBlock(lifetime, expectedBlock));
+                .put(pos, new TemporaryBlock(lifetime, world.getBlockState(pos)));
     }
 
     @SubscribeEvent
@@ -437,12 +567,14 @@ public class AnomalyEventHandler {
             Map.Entry<BlockPos, TemporaryBlock> entry = iterator.next();
             BlockPos pos = entry.getKey();
             TemporaryBlock temporary = entry.getValue();
+
+            // Не отсчитываем время для выгруженного чанка: иначе блок мог бы остаться навсегда.
+            if (!event.world.isBlockLoaded(pos)) continue;
             temporary.ticks--;
 
             if (temporary.ticks <= 0) {
-                // Если игрок заменил блок, не трогаем его постройку.
-                if (event.world.isBlockLoaded(pos)
-                        && event.world.getBlockState(pos).getBlock() == temporary.expectedBlock) {
+                // Удаляем только исходное состояние: изменённый игроком блок не трогаем.
+                if (event.world.getBlockState(pos).equals(temporary.expectedState)) {
                     event.world.setBlockToAir(pos);
                 }
                 iterator.remove();
