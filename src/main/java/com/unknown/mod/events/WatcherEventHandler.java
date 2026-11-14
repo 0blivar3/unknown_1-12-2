@@ -216,13 +216,11 @@ public class WatcherEventHandler {
             );
         }
 
-        if (newPos != null) {
-            relocateWatcher(entity, newPos);
+        if (newPos != null && relocateWatcher(entity, player, newPos)) {
             return;
         }
 
-        // Если безопасное место не найдено, не сбрасываем скрытый таймер:
-        // попробуем поискать снова через короткую паузу.
+        // Если безопасное и незаметное место не найдено, попробуем снова позже.
         entity.getEntityData().setInteger(HIDDEN_TICKS_TAG, Math.max(0, moveDelay - 20));
         entity.getEntityData().setInteger(MOVE_DELAY_TAG, moveDelay);
     }
@@ -232,7 +230,7 @@ public class WatcherEventHandler {
      * Клиент получает удаление старого Watcher и появление нового на месте,
      * поэтому интерполяция не рисует его путь сквозь стены и блоки.
      */
-    private void relocateWatcher(Entity oldWatcher, BlockPos newPos) {
+    private boolean relocateWatcher(Entity oldWatcher, EntityPlayer player, BlockPos newPos) {
         EntityWatcher replacement = new EntityWatcher(oldWatcher.world);
 
         replacement.setPosition(
@@ -247,6 +245,11 @@ public class WatcherEventHandler {
         replacement.rotationYawHead = oldWatcher.rotationYawHead;
         replacement.setHealth(((EntityLiving) oldWatcher).getHealth());
 
+        // Не создаём новую сущность в открытом поле зрения игрока.
+        if (canPlayerSee(player, replacement)) {
+            return false;
+        }
+
         // Переносим владельца, время жизни и счётчики, но начинаем новый цикл скрытого перемещения.
         replacement.getEntityData().merge(oldWatcher.getEntityData().copy());
         replacement.getEntityData().setInteger(HIDDEN_TICKS_TAG, 0);
@@ -258,7 +261,10 @@ public class WatcherEventHandler {
 
         if (oldWatcher.world.spawnEntity(replacement)) {
             oldWatcher.setDead();
+            return true;
         }
+
+        return false;
     }
 
     private EntityPlayer findOwner(Entity watcher) {
