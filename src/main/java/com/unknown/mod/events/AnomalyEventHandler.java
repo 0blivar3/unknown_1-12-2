@@ -192,7 +192,7 @@ public class AnomalyEventHandler {
 
         Block[] choices = {
                 Blocks.COBBLESTONE, Blocks.MOSSY_COBBLESTONE,
-                Blocks.OAK_PLANKS, Blocks.GRAVEL
+                Blocks.PLANKS, Blocks.GRAVEL
         };
 
         Block block = choices[world.rand.nextInt(choices.length)];
@@ -213,7 +213,7 @@ public class AnomalyEventHandler {
         };
         Block[] blocks = {
                 Blocks.CRAFTING_TABLE,
-                Blocks.OAK_PLANKS,
+                Blocks.PLANKS,
                 Blocks.COBBLESTONE
         };
 
