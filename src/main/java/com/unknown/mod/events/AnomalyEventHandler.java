@@ -192,7 +192,7 @@ public class AnomalyEventHandler {
         World world = player.world;
         Random random = world.rand;
 
-        for (int attempt = 0; attempt < 35; attempt++) {
+        for (int attempt = 0; attempt < 24; attempt++) {
             double angle = random.nextDouble() * Math.PI * 2.0D;
             double distance = 10.0D + random.nextDouble() * 14.0D;
             int x = (int) Math.floor(player.posX + Math.cos(angle) * distance);
@@ -219,8 +219,8 @@ public class AnomalyEventHandler {
                     || floorBlock == Blocks.CHEST) continue;
 
             if (world.getLightFor(EnumSkyBlock.BLOCK, pos) > 4) continue;
-            if (hasNearbyTorch(world, pos, 7)) continue;
-            if (hasNearbyPlayerStructure(world, pos, 4)) continue;
+            if (hasNearbyTorch(world, pos, 5)) continue;
+            if (hasNearbyPlayerStructure(world, pos, 3)) continue;
 
             return pos;
         }
