@@ -35,9 +35,9 @@ public class WatcherEventHandler {
     private static final String LOOK_TICKS_TAG = "unknown_watcher_look_ticks";
     private static final String LOOK_DESPAWN_DELAY_TAG = "unknown_watcher_look_delay";
 
-    // Время жизни Наблюдателя: случайные 15–90 секунд.
-    private static final int MIN_LIFETIME_TICKS = 20 * 15;
-    private static final int MAX_LIFETIME_TICKS = 20 * 90;
+    // Обычно силуэт виден лишь несколько секунд — достаточно, чтобы его можно было заметить на записи.
+    private static final int MIN_LIFETIME_TICKS = 20 * 8;
+    private static final int MAX_LIFETIME_TICKS = 20 * 24;
 
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
@@ -72,7 +72,7 @@ public class WatcherEventHandler {
 
         if (hasActiveWatcher(player)) return;
 
-        // Чем больше встреч было раньше, тем вероятнее следующая.
+        // Даже на поздних этапах Наблюдатель остаётся редким событием.
         int encounters = player.getEntityData().getInteger(ENCOUNTERS_TAG);
         int spawnChance = MysteryProgression.getWatcherChance(mysteryLevel, encounters);
 
@@ -130,12 +130,12 @@ public class WatcherEventHandler {
         );
         watcher.getEntityData().setInteger(
                 MOVE_DELAY_TAG,
-                60 + random.nextInt(101)
+                100 + random.nextInt(121)
         );
         watcher.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
         watcher.getEntityData().setInteger(
                 LOOK_DESPAWN_DELAY_TAG,
-                4 + random.nextInt(13)
+                30 + random.nextInt(41)
         );
 
         if (player.world.spawnEntity(watcher)) {
@@ -172,8 +172,7 @@ public class WatcherEventHandler {
             return;
         }
 
-        // Поворачивается только голова: корпус не дёргается вслед за игроком.
-        facePlayer((EntityLiving) entity, player);
+        // Не поворачивает голову за игроком: силуэт должен выглядеть как случайная деталь мира.
 
         if (canPlayerSee(player, entity)) {
             int lookTicks = entity.getEntityData().getInteger(LOOK_TICKS_TAG) + 1;
@@ -259,7 +258,7 @@ public class WatcherEventHandler {
 
         direction = direction.normalize();
 
-        if (look.dotProduct(direction) < 0.94D) return false;
+        if (look.dotProduct(direction) < 0.97D) return false;
 
         RayTraceResult hit = player.world.rayTraceBlocks(
                 eyes,
@@ -427,9 +426,16 @@ public class WatcherEventHandler {
         for (int attempt = 0; attempt < 70; attempt++) {
             double angle;
 
-            if (preferBehind && random.nextDouble() < 0.70D) {
+            double roll = random.nextDouble();
+            if (preferBehind && roll < 0.45D) {
+                // Часто — за спиной, но не всегда в одной и той же точке.
                 angle = behindAngle + (random.nextDouble() - 0.5D)
-                        * (Math.PI / 3.0D);
+                        * (Math.PI / 2.0D);
+            } else if (preferBehind && roll < 0.90D) {
+                // Иногда — сбоку, на периферии кадра.
+                double frontAngle = Math.atan2(Math.cos(yaw), -Math.sin(yaw));
+                double side = random.nextBoolean() ? 1.0D : -1.0D;
+                angle = frontAngle + side * (0.65D + random.nextDouble() * 0.45D);
             } else {
                 angle = random.nextDouble() * Math.PI * 2.0D;
             }
