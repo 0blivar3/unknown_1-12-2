@@ -119,8 +119,6 @@ public class WatcherEventHandler {
         // Корпус остаётся повёрнутым в сторону, а голова сможет следить за игроком.
         float bodyYaw = random.nextFloat() * 360.0F;
         watcher.rotationYaw = bodyYaw;
-        watcher.renderYawOffset = bodyYaw;
-        watcher.rotationYawHead = bodyYaw;
 
         watcher.getEntityData().setBoolean(WATCHER_TAG, true);
         watcher.getEntityData().setString(
@@ -241,8 +239,6 @@ public class WatcherEventHandler {
 
         replacement.rotationYaw = oldWatcher.rotationYaw;
         replacement.prevRotationYaw = oldWatcher.prevRotationYaw;
-        replacement.renderYawOffset = oldWatcher.renderYawOffset;
-        replacement.rotationYawHead = oldWatcher.rotationYawHead;
         replacement.setHealth(((EntityLiving) oldWatcher).getHealth());
 
         // Не создаём новую сущность в открытом поле зрения игрока.
@@ -278,14 +274,6 @@ public class WatcherEventHandler {
         }
 
         return null;
-    }
-
-    private void facePlayer(EntityLiving watcher, EntityPlayer player) {
-        double dx = player.posX - watcher.posX;
-        double dz = player.posZ - watcher.posZ;
-
-        float yaw = (float) (Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0F;
-        watcher.rotationYawHead = yaw;
     }
 
     private boolean canPlayerSee(EntityPlayer player, Entity watcher) {
