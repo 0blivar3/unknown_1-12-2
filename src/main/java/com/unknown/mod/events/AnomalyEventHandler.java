@@ -548,8 +548,6 @@ public class AnomalyEventHandler {
 
     private void registerTemporaryBlock(World world, BlockPos pos, int lifetime) {
         int dimension = world.provider.getDimension();
-        Block expectedBlock = world.getBlockState(pos).getBlock();
-
         temporaryBlocks.computeIfAbsent(dimension, key -> new HashMap<>())
                 .put(pos, new TemporaryBlock(lifetime, world.getBlockState(pos)));
     }
