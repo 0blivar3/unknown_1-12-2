@@ -1,6 +1,7 @@
 package com.unknown.mod.events;
 
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.block.material.Material;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -30,7 +31,7 @@ public final class CaveWatcherBehavior {
             if (!world.isBlockLoaded(above)) return false;
 
             IBlockState state = world.getBlockState(above);
-            if (state.getMaterial().blocksMovement()) {
+            if (isCaveSolid(state) && state.getMaterial().blocksMovement()) {
                 return hasNearbyCaveWall(world, playerPos, 4);
             }
         }
@@ -115,7 +116,8 @@ public final class CaveWatcherBehavior {
                     BlockPos check = pos.add(x, y, z);
                     if (!world.isBlockLoaded(check)) continue;
 
-                    if (world.getBlockState(check).getMaterial().blocksMovement()) {
+                    IBlockState state = world.getBlockState(check);
+                    if (isCaveSolid(state) && state.getMaterial().blocksMovement()) {
                         return true;
                     }
                 }
@@ -123,6 +125,12 @@ public final class CaveWatcherBehavior {
         }
 
         return false;
+    }
+
+    private static boolean isCaveSolid(IBlockState state) {
+        Material material = state.getMaterial();
+        // Листва и стволы не должны превращать густой лес в «пещеру».
+        return material != Material.LEAVES && material != Material.WOOD;
     }
 
     private static int MathHelperFloor(double value) {
