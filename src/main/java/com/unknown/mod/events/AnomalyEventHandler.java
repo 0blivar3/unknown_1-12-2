@@ -197,13 +197,16 @@ public class AnomalyEventHandler {
             double distance = 10.0D + random.nextDouble() * 14.0D;
             int x = (int) Math.floor(player.posX + Math.cos(angle) * distance);
             int z = (int) Math.floor(player.posZ + Math.sin(angle) * distance);
-            BlockPos pos = world.getTopSolidOrLiquidBlock(new BlockPos(x, player.posY, z));
+            BlockPos column = new BlockPos(x, player.posY, z);
+            if (!world.isBlockLoaded(column)) continue;
+            BlockPos pos = world.getTopSolidOrLiquidBlock(column);
 
-            if (!world.isBlockLoaded(pos) || !world.isAirBlock(pos)) continue;
+            if (!world.isAirBlock(pos)) continue;
             if (Math.abs(pos.getY() - player.posY) > 10.0D) continue;
 
             IBlockState floor = world.getBlockState(pos.down());
             if (!floor.getMaterial().blocksMovement() || floor.getMaterial().isLiquid()) continue;
+            if (!floor.isSideSolid(world, pos.down(), EnumFacing.UP)) continue;
 
             // Не ставим факел на искусственные полы и рядом с базами.
             Block floorBlock = floor.getBlock();
@@ -449,7 +452,9 @@ public class AnomalyEventHandler {
         double distance = 14.0D + random.nextInt(19);
         double x = player.posX + Math.cos(angle) * distance;
         double z = player.posZ + Math.sin(angle) * distance;
-        BlockPos pos = world.getTopSolidOrLiquidBlock(new BlockPos(x, player.posY, z));
+        BlockPos column = new BlockPos(x, player.posY, z);
+        if (!world.isBlockLoaded(column)) return;
+        BlockPos pos = world.getTopSolidOrLiquidBlock(column);
 
         if (!world.isBlockLoaded(pos)) return;
 
@@ -494,7 +499,9 @@ public class AnomalyEventHandler {
 
         int y;
         if (world.canSeeSky(player.getPosition())) {
-            BlockPos surface = world.getTopSolidOrLiquidBlock(new BlockPos(x, player.posY, z));
+            BlockPos column = new BlockPos(x, player.posY, z);
+            if (!world.isBlockLoaded(column)) return;
+            BlockPos surface = world.getTopSolidOrLiquidBlock(column);
             y = surface.getY();
         } else {
             y = Math.max(5, Math.min(world.getHeight() - 2,
@@ -505,7 +512,7 @@ public class AnomalyEventHandler {
         if (!world.isBlockLoaded(soundPos)) return;
 
         world.playSound(null, soundPos, SoundEvents.ENTITY_GHAST_SCREAM,
-                SoundCategory.HOSTILE, 2.0F, 0.78F + random.nextFloat() * 0.28F);
+                SoundCategory.HOSTILE, 2.5F, 0.78F + random.nextFloat() * 0.28F);
     }
 
     private void playFootsteps(EntityPlayer player) {
@@ -517,7 +524,10 @@ public class AnomalyEventHandler {
             double distance = 5 + random.nextInt(9);
             double x = player.posX + Math.cos(angle) * distance;
             double z = player.posZ + Math.sin(angle) * distance;
-            BlockPos pos = world.getTopSolidOrLiquidBlock(new BlockPos(x, player.posY, z));
+            BlockPos column = new BlockPos(x, player.posY, z);
+            if (!world.isBlockLoaded(column)) continue;
+            BlockPos pos = world.getTopSolidOrLiquidBlock(column);
+            if (!world.isBlockLoaded(pos)) continue;
 
             world.playSound(null, pos, SoundEvents.BLOCK_GRASS_STEP,
                     SoundCategory.BLOCKS, 0.45F, 1.0F);
@@ -533,7 +543,9 @@ public class AnomalyEventHandler {
             double distance = 8 + random.nextInt(9);
             double x = player.posX + Math.cos(angle) * distance;
             double z = player.posZ + Math.sin(angle) * distance;
-            BlockPos pos = world.getTopSolidOrLiquidBlock(new BlockPos(x, player.posY, z));
+            BlockPos column = new BlockPos(x, player.posY, z);
+            if (!world.isBlockLoaded(column)) continue;
+            BlockPos pos = world.getTopSolidOrLiquidBlock(column);
 
             if (!world.isBlockLoaded(pos)) continue;
             if (!world.isAirBlock(pos)) continue;
