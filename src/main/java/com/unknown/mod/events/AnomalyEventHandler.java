@@ -34,17 +34,51 @@ public class AnomalyEventHandler {
     private final Map<Integer, Map<BlockPos, TemporaryBlock>> temporaryBlocks =
             new HashMap<>();
 
-    private static final String[] SIGN_MESSAGES = {
-            "I SEE YOU", "DON'T LOOK", "TURN BACK", "HELP ME",
-            "...", "HE IS HERE", "RUN", "NOT ALONE",
-            "BEHIND YOU", "STAY QUIET", "GO HOME", "NO ESCAPE",
-            "WHY HERE?", "WAKE UP", "WRONG WORLD", "IT KNOWS",
-            "STILL HERE", "KEEP WALKING", "DONT MOVE", "LISTEN",
-            "COME CLOSER", "TOO LATE", "I REMEMBER", "LOOK UP",
-            "NOT REAL", "YOU LEFT ME", "WHERE AM I", "HIDE",
-            "NO ONE CAME", "ITS WATCHING", "TURN AROUND", "FORGIVE ME",
-            "DONT TRUST", "I HEAR YOU", "FOUND YOU", "GO DEEPER",
-            "ONE MORE DAY", "WHY ME?", "ITS INSIDE", "NEVER SLEEP"
+    // Надписи становятся всё более личными по мере роста уровня мистики.
+    // Каждая фраза разбита на четыре строки, чтобы помещаться на табличке.
+    private static final String[][] EARLY_SIGN_MESSAGES = {
+            {"I LEFT", "THE LAMP", "ON AGAIN", ""},
+            {"THE PATH", "WAS SHORTER", "YESTERDAY", ""},
+            {"SOMEONE", "USED THIS", "CAMPFIRE", ""},
+            {"I HEARD", "MINING", "LAST NIGHT", ""},
+            {"THE DOOR", "WAS OPEN", "WHEN I CAME", ""},
+            {"I THOUGHT", "THIS PLACE", "WAS EMPTY", ""},
+            {"THERE WAS", "A WINDOW", "HERE BEFORE", ""},
+            {"I LOST", "THE WAY", "BACK HOME", ""},
+            {"THE COWS", "WERE HERE", "A MOMENT AGO", ""},
+            {"I PUT IT", "BACK WHERE", "IT BELONGS", ""},
+            {"THE RAIN", "STOPPED", "TOO QUICKLY", ""},
+            {"I DON'T", "REMEMBER", "THIS HILL", ""}
+    };
+
+    private static final String[][] MID_SIGN_MESSAGES = {
+            {"THERE WERE", "FOOTSTEPS", "BESIDE MINE", ""},
+            {"I SAW", "A LIGHT", "UNDERGROUND", ""},
+            {"SOMEONE", "KEEPS MOVING", "MY CHESTS", ""},
+            {"THE SAME", "TREE WAS", "HERE TWICE", ""},
+            {"I HEARD", "MY DOOR", "FROM OUTSIDE", ""},
+            {"IT WAITS", "WHERE THE", "TORCH ENDS", ""},
+            {"I COUNTED", "THREE", "SHADOWS", ""},
+            {"THE ANIMALS", "WON'T CROSS", "THAT STREAM", ""},
+            {"I FOUND", "MY OWN", "FOOTPRINTS", "AHEAD"},
+            {"SOMETHING", "ANSWERED", "FROM BELOW", ""},
+            {"THE MAP", "IS MISSING", "A CHUNK", ""},
+            {"I WAS SURE", "I CLOSED", "THAT DOOR", ""}
+    };
+
+    private static final String[][] LATE_SIGN_MESSAGES = {
+            {"YOU BUILT", "THIS ROOM", "BEFORE", ""},
+            {"I REMEMBER", "WHEN YOU", "FIRST CAME", ""},
+            {"THERE IS", "NO MINE", "UNDER HERE", ""},
+            {"I CAN HEAR", "THE WORLD", "LOADING", ""},
+            {"YOU LEFT", "THE LIGHT", "ON FOR ME", ""},
+            {"WE USED", "TO LIVE", "IN THIS SEED", ""},
+            {"I WAS HERE", "BEFORE THE", "FIRST NIGHT", ""},
+            {"DON'T REMOVE", "THE BLOCK", "BEHIND YOU", ""},
+            {"YOU FOUND", "THE WRONG", "VERSION", ""},
+            {"I KNOW", "WHICH HOUSE", "IS YOURS", ""},
+            {"IT STARTED", "WHEN YOU", "SLEPT", ""},
+            {"THIS IS", "NOT WHERE", "YOU LEFT ME", ""}
     };
 
     private static class TemporaryBlock {
@@ -123,8 +157,15 @@ public class AnomalyEventHandler {
 
             if (world.getTileEntity(pos) instanceof TileEntitySign) {
                 TileEntitySign sign = (TileEntitySign) world.getTileEntity(pos);
-                String message = SIGN_MESSAGES[world.rand.nextInt(SIGN_MESSAGES.length)];
-                sign.signText[0] = new TextComponentString(message);
+                int level = MysteryProgression.getLevel(world);
+                String[][] messagePool = level <= 2
+                        ? EARLY_SIGN_MESSAGES
+                        : (level <= 4 ? MID_SIGN_MESSAGES : LATE_SIGN_MESSAGES);
+
+                String[] message = messagePool[world.rand.nextInt(messagePool.length)];
+                for (int line = 0; line < 4; line++) {
+                    sign.signText[line] = new TextComponentString(message[line]);
+                }
                 sign.markDirty();
             }
 
