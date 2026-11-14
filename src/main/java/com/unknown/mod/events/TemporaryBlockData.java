@@ -3,6 +3,7 @@ package com.unknown.mod.events;
 import net.minecraft.block.Block;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.storage.MapStorage;
@@ -14,7 +15,7 @@ import java.util.Map;
 
 /**
  * Сохраняет временные аномальные блоки между перезапусками мира.
- * Если игрок заменил или изменил блок, трекер не удаляет его.
+ * Если игрок заменил блок, изменил его состояние или отредактировал табличку, трекер не удаляет его.
  */
 public class TemporaryBlockData extends WorldSavedData {
 
@@ -23,10 +24,12 @@ public class TemporaryBlockData extends WorldSavedData {
     private static class Entry {
         private int ticks;
         private final int expectedStateId;
+        private final NBTTagCompound expectedTileData;
 
-        private Entry(int ticks, int expectedStateId) {
+        private Entry(int ticks, int expectedStateId, NBTTagCompound expectedTileData) {
             this.ticks = ticks;
             this.expectedStateId = expectedStateId;
+            this.expectedTileData = expectedTileData;
         }
     }
 
@@ -52,9 +55,13 @@ public class TemporaryBlockData extends WorldSavedData {
     }
 
     public void add(World world, BlockPos pos, int lifetime) {
+        TileEntity tile = world.getTileEntity(pos);
+        NBTTagCompound tileData = tile == null ? null : tile.writeToNBT(new NBTTagCompound());
+
         entries.put(pos.toImmutable(), new Entry(
                 lifetime,
-                Block.getStateId(world.getBlockState(pos))
+                Block.getStateId(world.getBlockState(pos)),
+                tileData
         ));
         markDirty();
     }
@@ -76,7 +83,16 @@ public class TemporaryBlockData extends WorldSavedData {
             if (temporary.ticks <= 0) {
                 int currentStateId = Block.getStateId(world.getBlockState(pos));
 
-                if (currentStateId == temporary.expectedStateId) {
+                boolean unchanged = currentStateId == temporary.expectedStateId;
+
+                if (unchanged && temporary.expectedTileData != null) {
+                    TileEntity currentTile = world.getTileEntity(pos);
+                    unchanged = currentTile != null
+                            && currentTile.writeToNBT(new NBTTagCompound())
+                            .equals(temporary.expectedTileData);
+                }
+
+                if (unchanged) {
                     world.setBlockToAir(pos);
                 }
 
@@ -103,7 +119,10 @@ public class TemporaryBlockData extends WorldSavedData {
             int stateId = tag.getInteger("State");
 
             if (ticks > 0) {
-                entries.put(BlockPos.fromLong(packedPos), new Entry(ticks, stateId));
+                NBTTagCompound tileData = tag.hasKey("Tile", 10)
+                        ? tag.getCompoundTag("Tile") : null;
+                entries.put(BlockPos.fromLong(packedPos),
+                        new Entry(ticks, stateId, tileData));
             }
         }
     }
@@ -117,6 +136,9 @@ public class TemporaryBlockData extends WorldSavedData {
             tag.setLong("Pos", entry.getKey().toLong());
             tag.setInteger("Ticks", entry.getValue().ticks);
             tag.setInteger("State", entry.getValue().expectedStateId);
+            if (entry.getValue().expectedTileData != null) {
+                tag.setTag("Tile", entry.getValue().expectedTileData);
+            }
             list.appendTag(tag);
         }
 
