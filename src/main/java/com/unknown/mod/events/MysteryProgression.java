@@ -28,30 +28,30 @@ public final class MysteryProgression {
         int max;
 
         switch (level) {
-            case 1: min = 3600; max = 6000; break; // 3–5 минут
-            case 2: min = 3000; max = 4800; break;
-            case 3: min = 2400; max = 4200; break;
-            default: min = 1800; max = 3600; break;
+            case 1: min = 4800; max = 8400; break; // 4–7 минут
+            case 2: min = 4200; max = 7200; break;
+            case 3: min = 3600; max = 6000; break;
+            default: min = 3000; max = 5400; break;
         }
 
         return min + random.nextInt(max - min + 1);
     }
 
     public static int getWatcherChance(int level, int encounters) {
-        int baseChance = 8 + Math.max(0, level - 1) * 9;
-        return Math.min(70, baseChance + encounters * 2);
+        int baseChance = 2 + Math.max(0, level - 1) * 2;
+        return Math.min(18, baseChance + encounters);
     }
 
     public static double getWatcherSpawnDistance(Random random, int level) {
         int stage = Math.min(5, Math.max(0, level - 1));
-        int minimum = 75 + stage * 12;
+        int minimum = 55 + stage * 7;
         return minimum + random.nextInt(21);
     }
 
     public static int getWatcherRelocationDistance(Random random, int level) {
         int stage = Math.min(5, Math.max(0, level - 1));
-        int minimum = 55 + stage * 8;
-        return minimum + random.nextInt(26);
+        int minimum = 45 + stage * 6;
+        return minimum + random.nextInt(21);
     }
 
     public static int getAnomalyCooldown(Random random, int level) {
