@@ -331,7 +331,7 @@ public class AnomalyEventHandler {
                 break;
             default:
                 world.playSound(null, pos, SoundEvents.BLOCK_WOOD_STEP,
-                        SoundCategory.BLOCK_BLOCKS, 0.4F, 1.0F);
+                        SoundCategory.BLOCKS, 0.4F, 1.0F);
                 break;
         }
     }
