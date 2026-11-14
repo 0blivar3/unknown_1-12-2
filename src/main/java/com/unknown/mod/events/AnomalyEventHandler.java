@@ -23,18 +23,12 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 public class AnomalyEventHandler {
 
     private static final String COOLDOWN_TAG = "unknown_anomaly_cooldown";
-
-    private final Map<Integer, Map<BlockPos, TemporaryBlock>> temporaryBlocks =
-            new HashMap<>();
 
     // Надписи становятся всё более личными по мере роста уровня мистики.
     // Каждая фраза разбита на четыре строки, чтобы помещаться на табличке.
@@ -82,16 +76,6 @@ public class AnomalyEventHandler {
             {"IT STARTED", "WHEN YOU", "SLEPT", ""},
             {"THIS IS", "NOT WHERE", "YOU LEFT ME", ""}
     };
-
-    private static class TemporaryBlock {
-        private int ticks;
-        private final IBlockState expectedState;
-
-        private TemporaryBlock(int ticks, IBlockState expectedState) {
-            this.ticks = ticks;
-            this.expectedState = expectedState;
-        }
-    }
 
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
@@ -559,39 +543,12 @@ public class AnomalyEventHandler {
     }
 
     private void registerTemporaryBlock(World world, BlockPos pos, int lifetime) {
-        int dimension = world.provider.getDimension();
-        temporaryBlocks.computeIfAbsent(dimension, key -> new HashMap<>())
-                .put(pos, new TemporaryBlock(lifetime, world.getBlockState(pos)));
+        TemporaryBlockData.get(world).add(world, pos, lifetime);
     }
 
     @SubscribeEvent
     public void onWorldTick(TickEvent.WorldTickEvent event) {
         if (event.phase != TickEvent.Phase.END || event.world.isRemote) return;
-
-        int dimension = event.world.provider.getDimension();
-        Map<BlockPos, TemporaryBlock> blocks = temporaryBlocks.get(dimension);
-        if (blocks == null) return;
-
-        Iterator<Map.Entry<BlockPos, TemporaryBlock>> iterator = blocks.entrySet().iterator();
-
-        while (iterator.hasNext()) {
-            Map.Entry<BlockPos, TemporaryBlock> entry = iterator.next();
-            BlockPos pos = entry.getKey();
-            TemporaryBlock temporary = entry.getValue();
-
-            // Не отсчитываем время для выгруженного чанка: иначе блок мог бы остаться навсегда.
-            if (!event.world.isBlockLoaded(pos)) continue;
-            temporary.ticks--;
-
-            if (temporary.ticks <= 0) {
-                // Удаляем только исходное состояние: изменённый игроком блок не трогаем.
-                if (event.world.getBlockState(pos).equals(temporary.expectedState)) {
-                    event.world.setBlockToAir(pos);
-                }
-                iterator.remove();
-            }
-        }
-
-        if (blocks.isEmpty()) temporaryBlocks.remove(dimension);
+        TemporaryBlockData.get(event.world).tick(event.world);
     }
 }
