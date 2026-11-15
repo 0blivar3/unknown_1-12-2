@@ -137,8 +137,8 @@ public class MaskedGirlEventHandler {
         World world = event.getWorld();
         BlockPos placed = event.getPos();
 
-        for (int dx = -6; dx <= 6; dx++) {
-            for (int dz = -6; dz <= 6; dz++) {
+        for (int dx = -9; dx <= 9; dx++) {
+            for (int dz = -9; dz <= 9; dz++) {
                 BlockPos center = placed.add(dx, 0, dz);
                 if (!world.isBlockLoaded(center) || !isRitualComplete(world, center)) continue;
 
@@ -250,11 +250,13 @@ public class MaskedGirlEventHandler {
         int dz = pos.getZ() - center.getZ();
         if (pos.getY() != center.getY()) return false;
 
-        if (Math.abs(dx) == 6 && Math.abs(dz) == 6) return true;
-        if (Math.abs(dx) > 5 || Math.abs(dz) > 5) return false;
+        if (Math.abs(dx) > 9 || Math.abs(dz) > 9) return false;
 
-        return (Math.abs(dx) == 5 || Math.abs(dz) == 5 || dx == 0 || dz == 0)
-                && (dx != 0 || dz != 0);
+        // Компонентом считается пыль креста/рамки или факел в одном из углов.
+        boolean dustLine = dx == 0 || dz == 0 || Math.abs(dx) == Math.abs(dz);
+        boolean corner = Math.abs(dx) >= 3 && Math.abs(dx) <= 9
+                && Math.abs(dx) == Math.abs(dz);
+        return (dustLine || corner) && (dx != 0 || dz != 0);
     }
 
     private void beginHaunting(EntityPlayer player) {
