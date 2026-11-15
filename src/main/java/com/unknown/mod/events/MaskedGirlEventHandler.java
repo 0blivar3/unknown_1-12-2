@@ -4,15 +4,14 @@ import com.unknown.mod.ModConfig;
 import com.unknown.mod.entity.EntityMaskedGirl;
 
 import net.minecraft.block.BlockStandingSign;
+import net.minecraft.block.BlockSkull;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.passive.EntityHorse;
 import net.minecraft.entity.passive.EntityTameable;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
-import net.minecraft.init.Items;
 import net.minecraft.init.SoundEvents;
-import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntitySign;
 import net.minecraft.util.EnumFacing;
@@ -24,7 +23,7 @@ import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
 import net.minecraft.world.storage.WorldInfo;
 
-import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.world.BlockEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
@@ -34,24 +33,21 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Последствия активации Тотема бессмертия.
- *
- * В Forge 1.12.2 нет отдельного события LivingEntityUseTotemEvent.
- * Поэтому мы фиксируем потенциально смертельный урон, а на следующем тике
- * подтверждаем активацию по факту уменьшения количества тотемов в руках.
+ * Ритуал призыва девушки в маске и последующие события её присутствия.
+ * Ритуал проверяется при установке блока, поэтому активация происходит
+ * непосредственно после размещения последнего компонента конструкции.
  */
 public class MaskedGirlEventHandler {
 
     private static final String HAUNTING_TICKS = "unknown_masked_girl_haunting";
     private static final String NEXT_EVENT_TICKS = "unknown_masked_girl_next_event";
-    private static final String PENDING_TOTEM = "unknown_masked_girl_pending_totem";
-    private static final String PENDING_TOTEM_COUNT = "unknown_masked_girl_totem_count";
 
     private static final String GIRL_TAG = "unknown_masked_girl";
     private static final String OWNER_TAG = "unknown_masked_girl_owner";
     private static final String AGE_TAG = "unknown_masked_girl_age";
     private static final String LIFETIME_TAG = "unknown_masked_girl_lifetime";
     private static final String LOOK_TICKS_TAG = "unknown_masked_girl_look_ticks";
+    private static final String RITUAL_ACTIVATED_TAG = "unknown_masked_girl_ritual_activated";
 
     private static final int HAUNTING_DURATION = 3 * 24000;
 
@@ -67,41 +63,10 @@ public class MaskedGirlEventHandler {
     };
 
     @SubscribeEvent
-    public void onLivingDamage(LivingDamageEvent event) {
-        if (!(event.getEntityLiving() instanceof EntityPlayer)) return;
-
-        EntityPlayer player = (EntityPlayer) event.getEntityLiving();
-        if (player.world.isRemote || !ModConfig.maskedGirlEnabled) return;
-
-        // LivingDamageEvent уже содержит итоговый урон после брони и поглощения.
-        if (player.getHealth() > event.getAmount()) return;
-
-        int heldTotems = getHeldTotemCount(player);
-        if (heldTotems <= 0) return;
-
-        player.getEntityData().setBoolean(PENDING_TOTEM, true);
-        player.getEntityData().setInteger(PENDING_TOTEM_COUNT, heldTotems);
-    }
-
-    @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || event.player.world.isRemote) return;
 
         EntityPlayer player = event.player;
-
-        // Подтверждаем, что тотем действительно был потрачен, а не просто
-        // находился в руке во время удара, который игрок пережил.
-        if (player.getEntityData().getBoolean(PENDING_TOTEM)) {
-            int previousCount = player.getEntityData().getInteger(PENDING_TOTEM_COUNT);
-            int currentCount = getHeldTotemCount(player);
-
-            player.getEntityData().removeTag(PENDING_TOTEM);
-            player.getEntityData().removeTag(PENDING_TOTEM_COUNT);
-
-            if (currentCount < previousCount && !player.isDead && player.getHealth() > 0.0F) {
-                beginHaunting(player);
-            }
-        }
 
         int remaining = player.getEntityData().getInteger(HAUNTING_TICKS);
         if (remaining <= 0 || !ModConfig.maskedGirlEnabled) return;
@@ -155,6 +120,123 @@ public class MaskedGirlEventHandler {
         }
     }
 
+    /**
+     * Проверяем ритуал после установки любого блока. Центр ищется в радиусе
+     * шести блоков от места установки, чтобы сработало и при установке головы,
+     * и при установке последней пыли или факела.
+     */
+    @SubscribeEvent
+    public void onBlockPlaced(BlockEvent.PlaceEvent event) {
+        if (event.getWorld().isRemote || !ModConfig.maskedGirlEnabled) return;
+
+        EntityPlayer player = event.getPlayer();
+        if (player == null) return;
+
+        World world = event.getWorld();
+        BlockPos placed = event.getPos();
+
+        for (int dx = -6; dx <= 6; dx++) {
+            for (int dz = -6; dz <= 6; dz++) {
+                BlockPos center = placed.add(dx, 0, dz);
+                if (!world.isBlockLoaded(center) || !isRitualComplete(world, center)) continue;
+
+                TileEntity tile = world.getTileEntity(center);
+                if (tile == null) continue;
+                if (tile.getTileData().getBoolean(RITUAL_ACTIVATED_TAG)) continue;
+
+                tile.getTileData().setBoolean(RITUAL_ACTIVATED_TAG, true);
+                beginHaunting(player);
+                return;
+            }
+        }
+    }
+
+    /**
+     * Разрушение любого компонента сбрасывает отметку активации на центральной
+     * голове. После восстановления конструкции ритуал можно провести снова.
+     */
+    @SubscribeEvent
+    public void onBlockBroken(BlockEvent.BreakEvent event) {
+        if (event.getWorld().isRemote) return;
+
+        World world = event.getWorld();
+        BlockPos broken = event.getPos();
+
+        for (int dx = -6; dx <= 6; dx++) {
+            for (int dz = -6; dz <= 6; dz++) {
+                BlockPos center = broken.add(dx, 0, dz);
+                if (!world.isBlockLoaded(center) || !isPlayerHead(world, center)) continue;
+                if (!isRitualComponent(center, broken)) continue;
+
+                TileEntity tile = world.getTileEntity(center);
+                if (tile != null) tile.getTileData().removeTag(RITUAL_ACTIVATED_TAG);
+            }
+        }
+    }
+
+    private boolean isRitualComplete(World world, BlockPos center) {
+        if (!isPlayerHead(world, center)) return false;
+
+        // Внешний квадрат и четыре дорожки, идущие от головы к серединам сторон.
+        for (int dx = -5; dx <= 5; dx++) {
+            for (int dz = -5; dz <= 5; dz++) {
+                if (dx == 0 && dz == 0) continue;
+
+                boolean outerEdge = Math.abs(dx) == 5 || Math.abs(dz) == 5;
+                boolean radialLine = dx == 0 || dz == 0;
+                if (!outerEdge && !radialLine) continue;
+
+                BlockPos dustPos = center.add(dx, 0, dz);
+                if (!world.isBlockLoaded(dustPos)
+                        || world.getBlockState(dustPos).getBlock() != Blocks.REDSTONE_WIRE
+                        || !hasRitualSupport(world, dustPos)) {
+                    return false;
+                }
+            }
+        }
+
+        // Четыре красных факела стоят по диагонали за углами редстоуновой рамки.
+        for (int dx : new int[] {-6, 6}) {
+            for (int dz : new int[] {-6, 6}) {
+                BlockPos torchPos = center.add(dx, 0, dz);
+                if (!world.isBlockLoaded(torchPos)
+                        || world.getBlockState(torchPos).getBlock() != Blocks.REDSTONE_TORCH
+                        || !hasRitualSupport(world, torchPos)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private boolean isPlayerHead(World world, BlockPos pos) {
+        if (!world.isBlockLoaded(pos)) return false;
+
+        return world.getBlockState(pos).getBlock() == Blocks.SKULL
+                && world.getBlockState(pos).getValue(BlockSkull.TYPE) == BlockSkull.EnumType.PLAYER;
+    }
+
+    private boolean hasRitualSupport(World world, BlockPos pos) {
+        BlockPos support = pos.down();
+        if (!world.isBlockLoaded(support)) return false;
+
+        return world.getBlockState(support).isSideSolid(world, support, EnumFacing.UP)
+                && !world.getBlockState(support).getMaterial().isLiquid();
+    }
+
+    private boolean isRitualComponent(BlockPos center, BlockPos pos) {
+        int dx = pos.getX() - center.getX();
+        int dz = pos.getZ() - center.getZ();
+        if (pos.getY() != center.getY()) return false;
+
+        if (Math.abs(dx) == 6 && Math.abs(dz) == 6) return true;
+        if (Math.abs(dx) > 5 || Math.abs(dz) > 5) return false;
+
+        return (Math.abs(dx) == 5 || Math.abs(dz) == 5 || dx == 0 || dz == 0)
+                && (dx != 0 || dz != 0);
+    }
+
     private void beginHaunting(EntityPlayer player) {
         player.getEntityData().setInteger(HAUNTING_TICKS, HAUNTING_DURATION);
         player.getEntityData().setInteger(NEXT_EVENT_TICKS, 1800 + player.world.rand.nextInt(1801));
@@ -165,17 +247,6 @@ public class MaskedGirlEventHandler {
         info.setThunderTime(12000);
         info.setRaining(true);
         info.setThundering(true);
-    }
-
-    private int getHeldTotemCount(EntityPlayer player) {
-        int count = 0;
-        ItemStack main = player.getHeldItemMainhand();
-        ItemStack off = player.getHeldItemOffhand();
-
-        if (!main.isEmpty() && main.getItem() == Items.TOTEM_OF_UNDYING) count += main.getCount();
-        if (!off.isEmpty() && off.getItem() == Items.TOTEM_OF_UNDYING) count += off.getCount();
-
-        return count;
     }
 
     private boolean performHauntingEvent(EntityPlayer player) {
