@@ -50,6 +50,12 @@ public class MaskedGirlEventHandler {
     private static final String LIFETIME_TAG = "unknown_masked_girl_lifetime";
     private static final String LOOK_TICKS_TAG = "unknown_masked_girl_look_ticks";
     private static final String RITUAL_ACTIVATED_TAG = "unknown_masked_girl_ritual_activated";
+    private static final String ATTACK_STATE_TAG = "unknown_masked_girl_attack_state";
+    private static final String ATTACK_TIMER_TAG = "unknown_masked_girl_attack_timer";
+    private static final String STARE_TIMER_TAG = "unknown_masked_girl_stare_timer";
+    private static final String ATTACK_COOLDOWN_TAG = "unknown_masked_girl_attack_cooldown";
+    private static final String HIT_COOLDOWN_TAG = "unknown_masked_girl_hit_cooldown";
+    private static final int STAGE_LENGTH = 24000;
 
     private static final int HAUNTING_DURATION = 3 * 24000;
 
@@ -82,7 +88,9 @@ public class MaskedGirlEventHandler {
         }
 
         Random random = player.world.rand;
-        boolean eventHappened = performHauntingEvent(player);
+        int elapsed = HAUNTING_DURATION - remaining;
+        int stage = Math.min(3, elapsed / STAGE_LENGTH + 1);
+        boolean eventHappened = performHauntingEvent(player, stage);
         int nextDelay = 3600 + random.nextInt(3601);
         if (!eventHappened) nextDelay = 800 + random.nextInt(801);
         player.getEntityData().setInteger(NEXT_EVENT_TICKS, nextDelay);
@@ -108,17 +116,65 @@ public class MaskedGirlEventHandler {
         }
 
         EntityPlayer owner = findOwner(girl);
-        if (owner == null || girl.getDistance(owner) < 9.0F) {
+        if (owner == null) {
             girl.setDead();
             return;
         }
+        int elapsed = HAUNTING_DURATION - owner.getEntityData().getInteger(HAUNTING_TICKS);
+        int stage = Math.min(3, elapsed / STAGE_LENGTH + 1);
+        if (stage < 3 && girl.getDistance(owner) < 9.0F) {
+            girl.setDead();
+            return;
+        }
+        if (stage < 3) {
+            if (isPlayerLookingAt(owner, girl)) {
+                int lookTicks = girl.getEntityData().getInteger(LOOK_TICKS_TAG) + 1;
+                girl.getEntityData().setInteger(LOOK_TICKS_TAG, lookTicks);
+                if (lookTicks >= 15) girl.setDead();
+            } else {
+                girl.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
+            }
+            return;
+        }
 
-        if (isPlayerLookingAt(owner, girl)) {
-            int lookTicks = girl.getEntityData().getInteger(LOOK_TICKS_TAG) + 1;
-            girl.getEntityData().setInteger(LOOK_TICKS_TAG, lookTicks);
-            if (lookTicks >= 15) girl.setDead();
-        } else {
-            girl.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
+        // Stage III: stare briefly, then pursue for 40-60 in-game seconds.
+        girl.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
+        int state = girl.getEntityData().getInteger(ATTACK_STATE_TAG);
+        int cooldown = girl.getEntityData().getInteger(ATTACK_COOLDOWN_TAG);
+        if (state == 0) {
+            if (cooldown > 0) {
+                girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, cooldown - 1);
+                girl.faceEntity(owner, 4.0F, 4.0F);
+                return;
+            }
+            girl.getEntityData().setInteger(ATTACK_STATE_TAG, 1);
+            girl.getEntityData().setInteger(STARE_TIMER_TAG, 60 + girl.world.rand.nextInt(61));
+            girl.getEntityData().setInteger(ATTACK_TIMER_TAG, 800 + girl.world.rand.nextInt(401));
+            girl.getNavigator().clearPath();
+            return;
+        }
+        if (state == 1) {
+            girl.faceEntity(owner, 6.0F, 6.0F);
+            int stare = girl.getEntityData().getInteger(STARE_TIMER_TAG) - 1;
+            girl.getEntityData().setInteger(STARE_TIMER_TAG, stare);
+            if (stare <= 0) girl.getEntityData().setInteger(ATTACK_STATE_TAG, 2);
+            return;
+        }
+        int attackTime = girl.getEntityData().getInteger(ATTACK_TIMER_TAG) - 1;
+        girl.getEntityData().setInteger(ATTACK_TIMER_TAG, attackTime);
+        girl.getNavigator().tryMoveToEntityLiving(owner, 1.15D);
+        girl.faceEntity(owner, 30.0F, 30.0F);
+        int hitCooldown = girl.getEntityData().getInteger(HIT_COOLDOWN_TAG);
+        if (hitCooldown > 0) {
+            girl.getEntityData().setInteger(HIT_COOLDOWN_TAG, hitCooldown - 1);
+        } else if (girl.getDistance(owner) <= 2.4F) {
+            girl.attackEntityAsMob(owner);
+            girl.getEntityData().setInteger(HIT_COOLDOWN_TAG, 20);
+        }
+        if (attackTime <= 0) {
+            girl.getNavigator().clearPath();
+            girl.getEntityData().setInteger(ATTACK_STATE_TAG, 0);
+            girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, 1200 + girl.world.rand.nextInt(2401));
         }
     }
 
@@ -310,23 +366,28 @@ public class MaskedGirlEventHandler {
         info.setThundering(true);
     }
 
-    private boolean performHauntingEvent(EntityPlayer player) {
+    private boolean performHauntingEvent(EntityPlayer player, int stage) {
         Random random = player.world.rand;
         int choice = random.nextInt(100);
-
-        if (choice < 35 && !hasActiveGirl(player)) {
-            if (spawnGirl(player)) return true;
-        } else if (choice < 58) {
-            playDistantFootsteps(player);
-            return true;
-        } else if (choice < 82) {
-            makeAnimalsFollow(player);
-            return true;
-        } else {
-            if (placeThreatSign(player)) return true;
+        if (stage == 1) {
+            if (choice < 30 && !hasActiveGirl(player)) return spawnGirl(player, stage);
+            if (choice < 55) { playDistantFootsteps(player); return true; }
+            if (choice < 82) { makeAnimalsFollow(player); return true; }
+            return placeThreatSign(player);
         }
-
-        return false;
+        if (stage == 2) {
+            if (choice < 22 && !hasActiveGirl(player)) return spawnGirl(player, stage);
+            if (choice < 42) return openNearbyDoor(player);
+            if (choice < 62) return killNearbyMob(player);
+            if (choice < 82) { playDistantFootsteps(player); return true; }
+            if (choice < 92) { makeAnimalsFollow(player); return true; }
+            return placeThreatSign(player);
+        }
+        if (choice < 28 && !hasActiveGirl(player)) return spawnGirl(player, stage);
+        if (choice < 48) return openNearbyDoor(player);
+        if (choice < 68) return killNearbyMob(player);
+        if (choice < 84) { playDistantFootsteps(player); return true; }
+        return placeThreatSign(player);
     }
 
     private boolean hasActiveGirl(EntityPlayer player) {
@@ -343,9 +404,10 @@ public class MaskedGirlEventHandler {
         return false;
     }
 
-    private boolean spawnGirl(EntityPlayer player) {
+    private boolean spawnGirl(EntityPlayer player, int stage) {
         World world = player.world;
-        BlockPos pos = findSafePosition(player, 30.0D, 55.0D, true);
+        BlockPos pos = findSafePosition(player, stage >= 2 ? 22.0D : 30.0D,
+                stage >= 2 ? 45.0D : 55.0D, true);
         if (pos == null) return false;
 
         EntityMaskedGirl girl = new EntityMaskedGirl(world);
@@ -357,7 +419,7 @@ public class MaskedGirlEventHandler {
         girl.rotationYaw = yaw;
         girl.prevRotationYaw = yaw;
 
-        if (world.rand.nextBoolean()) {
+        if (stage >= 2 || world.rand.nextBoolean()) {
             girl.setHeldItem(net.minecraft.util.EnumHand.MAIN_HAND, new ItemStack(Items.IRON_SWORD));
         }
 
@@ -366,6 +428,8 @@ public class MaskedGirlEventHandler {
         girl.getEntityData().setInteger(AGE_TAG, 0);
         girl.getEntityData().setInteger(LIFETIME_TAG, 1200 + world.rand.nextInt(1801));
         girl.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
+        girl.getEntityData().setInteger(ATTACK_STATE_TAG, 0);
+        girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, 600 + world.rand.nextInt(1201));
 
         return world.spawnEntity(girl);
     }
@@ -516,6 +580,63 @@ public class MaskedGirlEventHandler {
             sign.signText[i] = new TextComponentString(message[i]);
         }
         sign.markDirty();
+        return true;
+    }
+
+
+    /** Opens an actual closed wooden door near the player. */
+    private boolean openNearbyDoor(EntityPlayer player) {
+        World world = player.world;
+        BlockPos base = player.getPosition();
+        List<BlockPos> doors = new ArrayList<>();
+        for (int x = -18; x <= 18; x++) {
+            for (int y = -3; y <= 4; y++) {
+                for (int z = -18; z <= 18; z++) {
+                    BlockPos pos = base.add(x, y, z);
+                    if (!world.isBlockLoaded(pos)) continue;
+                    net.minecraft.block.Block block = world.getBlockState(pos).getBlock();
+                    if (!(block instanceof net.minecraft.block.BlockDoor) || block == Blocks.IRON_DOOR) continue;
+                    if (world.getBlockState(pos).getValue(net.minecraft.block.BlockDoor.OPEN)) continue;
+                    doors.add(pos);
+                }
+            }
+        }
+        if (doors.isEmpty()) return false;
+        BlockPos doorPos = doors.get(world.rand.nextInt(doors.size()));
+        world.setBlockState(doorPos,
+                world.getBlockState(doorPos).withProperty(net.minecraft.block.BlockDoor.OPEN, true), 2);
+        world.playEvent(null, 1005, doorPos, 0);
+        return true;
+    }
+
+    /** Uses normal entity damage so the mob produces its ordinary drops. */
+    private boolean killNearbyMob(EntityPlayer player) {
+        World world = player.world;
+        List<net.minecraft.entity.EntityLiving> candidates = world.getEntitiesWithinAABB(
+                net.minecraft.entity.EntityLiving.class,
+                player.getEntityBoundingBox().grow(24.0D, 8.0D, 24.0D));
+        List<net.minecraft.entity.EntityLiving> eligible = new ArrayList<>();
+        for (net.minecraft.entity.EntityLiving target : candidates) {
+            if (target.isDead || target instanceof EntityMaskedGirl
+                    || target instanceof net.minecraft.entity.passive.EntityAnimal
+                    || target instanceof net.minecraft.entity.passive.EntityVillager
+                    || target instanceof net.minecraft.entity.monster.EntityIronGolem
+                    || target.getDistanceSq(player) < 36.0D) continue;
+            eligible.add(target);
+        }
+        if (eligible.isEmpty()) return false;
+        net.minecraft.entity.EntityLiving target = eligible.get(world.rand.nextInt(eligible.size()));
+        EntityMaskedGirl attacker = new EntityMaskedGirl(world);
+        attacker.setPosition(target.posX + 1.2D, target.posY, target.posZ + 1.2D);
+        attacker.setHeldItem(net.minecraft.util.EnumHand.MAIN_HAND, new ItemStack(Items.IRON_SWORD));
+        attacker.getEntityData().setBoolean(GIRL_TAG, true);
+        attacker.getEntityData().setString(OWNER_TAG, player.getUniqueID().toString());
+        attacker.getEntityData().setInteger(AGE_TAG, 0);
+        attacker.getEntityData().setInteger(LIFETIME_TAG, 100);
+        if (!world.spawnEntity(attacker)) return false;
+        target.attackEntityFrom(net.minecraft.util.DamageSource.causeMobDamage(attacker),
+                target.getMaxHealth() + 20.0F);
+        attacker.setDead();
         return true;
     }
 
