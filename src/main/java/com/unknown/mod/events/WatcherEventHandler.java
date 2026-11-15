@@ -101,7 +101,11 @@ public class WatcherEventHandler {
 
         // В пещерах используется отдельный поиск: наземные координаты здесь не подходят.
         if (CaveWatcherBehavior.isPlayerInCave(player)) {
-            pos = CaveWatcherBehavior.findPosition(player, 18.0D, 38.0D);
+            pos = CaveWatcherBehavior.findPosition(
+                    player,
+                    18.0D * ModConfig.watcherDistanceMultiplier,
+                    38.0D * ModConfig.watcherDistanceMultiplier
+            );
         } else {
             double distance = MysteryProgression.getWatcherSpawnDistance(random, mysteryLevel);
             // Лес, возвышенность, архитектура или укрытие.
@@ -206,7 +210,11 @@ public class WatcherEventHandler {
         BlockPos newPos;
 
         if (CaveWatcherBehavior.isPlayerInCave(player)) {
-            newPos = CaveWatcherBehavior.findPosition(player, 18.0D, 38.0D);
+            newPos = CaveWatcherBehavior.findPosition(
+                    player,
+                    18.0D * ModConfig.watcherDistanceMultiplier,
+                    38.0D * ModConfig.watcherDistanceMultiplier
+            );
         } else {
             newPos = findUnexpectedPosition(
                     player,
@@ -295,20 +303,28 @@ public class WatcherEventHandler {
 
         direction = direction.normalize();
 
-        if (look.dotProduct(direction) < 0.97D) return false;
+        if (look.dotProduct(direction) < 0.90D) return false;
 
-        RayTraceResult hit = player.world.rayTraceBlocks(
-                eyes,
-                target,
-                false,
-                true,
-                false
-        );
+        // Прозрачное стекло не должно скрывать Наблюдателя,
+        // но непрозрачная стена за стеклом всё равно должна блокировать взгляд.
+        Vec3d rayStart = eyes;
+        for (int i = 0; i < 8; i++) {
+            RayTraceResult hit = player.world.rayTraceBlocks(
+                    rayStart, target, false, true, false
+            );
 
-        // Стекло не должно полностью скрывать Наблюдателя от проверки взгляда.
-        return hit == null
-                || (hit.typeOfHit == RayTraceResult.Type.BLOCK
-                && player.world.getBlockState(hit.getBlockPos()).getMaterial() == Material.GLASS);
+            if (hit == null || hit.typeOfHit != RayTraceResult.Type.BLOCK) {
+                return true;
+            }
+
+            if (player.world.getBlockState(hit.getBlockPos()).getMaterial() != Material.GLASS) {
+                return false;
+            }
+
+            rayStart = hit.hitVec.add(direction.scale(0.01D));
+        }
+
+        return true;
     }
 
     /**
