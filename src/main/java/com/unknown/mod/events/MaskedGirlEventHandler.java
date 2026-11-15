@@ -581,7 +581,7 @@ public class MaskedGirlEventHandler {
     }
 
 
-    /** Opens an actual closed wooden door near the player. */
+    /** Opens an actual nearby wooden or iron door and plays its matching vanilla sound. */
     private boolean openNearbyDoor(EntityPlayer player) {
         World world = player.world;
         BlockPos base = player.getPosition();
@@ -592,7 +592,7 @@ public class MaskedGirlEventHandler {
                     BlockPos pos = base.add(x, y, z);
                     if (!world.isBlockLoaded(pos)) continue;
                     net.minecraft.block.Block block = world.getBlockState(pos).getBlock();
-                    if (!(block instanceof net.minecraft.block.BlockDoor) || block == Blocks.IRON_DOOR) continue;
+                    if (!(block instanceof net.minecraft.block.BlockDoor)) continue;
                     net.minecraft.block.state.IBlockState doorState = world.getBlockState(pos);
                     if (doorState.getValue(net.minecraft.block.BlockDoor.HALF)
                             != net.minecraft.block.BlockDoor.EnumDoorHalf.LOWER) continue;
@@ -602,10 +602,16 @@ public class MaskedGirlEventHandler {
             }
         }
         if (doors.isEmpty()) return false;
+
         BlockPos doorPos = doors.get(world.rand.nextInt(doors.size()));
-        world.setBlockState(doorPos,
-                world.getBlockState(doorPos).withProperty(net.minecraft.block.BlockDoor.OPEN, true), 2);
-        world.playEvent(null, 1005, doorPos, 0);
+        net.minecraft.block.Block doorBlock = world.getBlockState(doorPos).getBlock();
+        if (!world.setBlockState(doorPos,
+                world.getBlockState(doorPos).withProperty(net.minecraft.block.BlockDoor.OPEN, true), 2)) {
+            return false;
+        }
+
+        // Vanilla level events use distinct sounds for wooden and iron doors.
+        world.playEvent(null, doorBlock == Blocks.IRON_DOOR ? 1011 : 1005, doorPos, 0);
         return true;
     }
 
