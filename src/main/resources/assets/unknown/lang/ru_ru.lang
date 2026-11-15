@@ -1,0 +1,62 @@
+# UNKNOWN — Русская локализация
+
+entity.unknown.watcher.name=Наблюдатель
+
+config.category.unknown.general=Общие настройки
+config.category.unknown.characters=Персонажи
+config.category.unknown.anomalies=Аномалии
+config.category.unknown.progression=Развитие мистики
+config.category.unknown.frequency=Частота событий
+config.category.unknown.watcher=Наблюдатель
+
+config.unknown.general.mysteryEnabled=Включить систему мистики
+config.unknown.general.mysteryEnabled.tooltip=Включает постепенное развитие загадочных событий.
+config.unknown.general.anomaliesEnabled=Включить аномалии
+config.unknown.general.anomaliesEnabled.tooltip=Главный переключатель всех случайных аномалий.
+
+config.unknown.characters.watcherEnabled=Включить Наблюдателя
+config.unknown.characters.watcherEnabled.tooltip=Разрешает появление Наблюдателя в мире.
+
+config.unknown.anomalies.signs=Загадочные таблички
+config.unknown.anomalies.signs.tooltip=Разрешает появление странных табличек.
+config.unknown.anomalies.torches=Исчезающие факелы
+config.unknown.anomalies.torches.tooltip=Разрешает появление и исчезновение факелов.
+config.unknown.anomalies.creepyNoise=Жуткие звуки
+config.unknown.anomalies.creepyNoise.tooltip=Разрешает случайное воспроизведение тревожных звуков.
+config.unknown.anomalies.footsteps=Шаги
+config.unknown.anomalies.footsteps.tooltip=Разрешает воспроизведение ложных шагов поблизости.
+config.unknown.anomalies.lonelyBlocks=Одинокие блоки
+config.unknown.anomalies.lonelyBlocks.tooltip=Разрешает появление отдельных блоков.
+config.unknown.anomalies.presenceTraces=Следы присутствия
+config.unknown.anomalies.presenceTraces.tooltip=Разрешает появление небольших следов чьего-то присутствия.
+config.unknown.anomalies.openDoors=Открывающиеся двери
+config.unknown.anomalies.openDoors.tooltip=Разрешает дверям открываться самостоятельно.
+config.unknown.anomalies.animalBehavior=Странное поведение животных
+config.unknown.anomalies.animalBehavior.tooltip=Разрешает мирным животным вести себя необычно.
+config.unknown.anomalies.animalDisappearance=Исчезновение животных
+config.unknown.anomalies.animalDisappearance.tooltip=Разрешает животным бесследно исчезать.
+config.unknown.anomalies.distantGhastScream=Далёкий крик гаста
+config.unknown.anomalies.distantGhastScream.tooltip=Воспроизводит далёкий крик гаста без его появления.
+
+config.unknown.progression.startDay=День начала
+config.unknown.progression.startDay.tooltip=Игровой день, начиная с которого появляются загадочные события.
+config.unknown.progression.daysPerLevel=Дней на уровень мистики
+config.unknown.progression.daysPerLevel.tooltip=Количество игровых дней для повышения уровня мистики.
+config.unknown.progression.maxLevel=Максимальный уровень мистики
+config.unknown.progression.maxLevel.tooltip=Максимальный уровень развития мистики — от 1 до 6.
+
+config.unknown.frequency.anomalyCooldownMultiplier=Частота проверок аномалий
+config.unknown.frequency.anomalyCooldownMultiplier.tooltip=Чем выше значение, тем чаще проверяется возможность появления аномалий.
+config.unknown.frequency.anomalyChanceMultiplier=Шанс аномалий
+config.unknown.frequency.anomalyChanceMultiplier.tooltip=Множитель вероятности срабатывания аномалий.
+config.unknown.frequency.watcherCooldownMultiplier=Частота проверок Наблюдателя
+config.unknown.frequency.watcherCooldownMultiplier.tooltip=Чем выше значение, тем чаще проверяется возможность появления Наблюдателя.
+config.unknown.frequency.watcherChanceMultiplier=Шанс появления Наблюдателя
+config.unknown.frequency.watcherChanceMultiplier.tooltip=Множитель вероятности появления Наблюдателя.
+config.unknown.frequency.watcherDistanceMultiplier=Дистанция Наблюдателя
+config.unknown.frequency.watcherDistanceMultiplier.tooltip=Множитель дистанции появления и перемещения Наблюдателя.
+
+config.unknown.watcher.minLifetimeSeconds=Минимальное время существования (сек.)
+config.unknown.watcher.minLifetimeSeconds.tooltip=Минимальное время, в течение которого Наблюдатель остаётся в мире.
+config.unknown.watcher.maxLifetimeSeconds=Максимальное время существования (сек.)
+config.unknown.watcher.maxLifetimeSeconds.tooltip=Максимальное время, в течение которого Наблюдатель остаётся в мире.
