@@ -1,21 +1,22 @@
-
 package com.unknown.mod;
 
 import com.unknown.mod.ModConfig;
+import com.unknown.mod.entity.EntityMaskedGirl;
 import com.unknown.mod.entity.EntityWatcher;
+import com.unknown.mod.events.AnomalyEventHandler;
+import com.unknown.mod.events.MaskedGirlEventHandler;
 import com.unknown.mod.events.WatcherEventHandler;
 import com.unknown.mod.proxy.CommonProxy;
 
 import net.minecraft.util.ResourceLocation;
 
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.SidedProxy;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.registry.EntityRegistry;
-import com.unknown.mod.events.AnomalyEventHandler;
-import net.minecraftforge.common.MinecraftForge;
 
 import org.apache.logging.log4j.Logger;
 
@@ -44,7 +45,6 @@ public class UnknownMod {
 
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
-
         logger = event.getModLog();
         ModConfig.load(event.getSuggestedConfigurationFile());
 
@@ -59,10 +59,22 @@ public class UnknownMod {
                 true
         );
 
+        EntityRegistry.registerModEntity(
+                new ResourceLocation(MODID, "masked_girl"),
+                EntityMaskedGirl.class,
+                "MaskedGirl",
+                2,
+                this,
+                128,
+                1,
+                false
+        );
+
         proxy.registerRenderers();
 
         MinecraftForge.EVENT_BUS.register(new AnomalyEventHandler());
         MinecraftForge.EVENT_BUS.register(new WatcherEventHandler());
+        MinecraftForge.EVENT_BUS.register(new MaskedGirlEventHandler());
 
         logger.info("UNKNOWN is awakening...");
     }
