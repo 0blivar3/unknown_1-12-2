@@ -3,6 +3,8 @@ package com.unknown.mod.events;
 import com.unknown.mod.ModConfig;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockDoor;
+import net.minecraft.block.BlockFence;
+import net.minecraft.block.BlockFenceGate;
 import net.minecraft.block.BlockStandingSign;
 import net.minecraft.block.BlockTorch;
 import net.minecraft.block.state.IBlockState;
@@ -457,6 +459,11 @@ public class AnomalyEventHandler {
             if (distanceSq < 100.0D || distanceSq > 484.0D) continue;
             if (player.canEntityBeSeen(animal)) continue;
 
+            // Не исчезают животные рядом с базой, в загонах или у ограждений.
+            BlockPos animalPos = animal.getPosition();
+            if (hasNearbyPlayerStructure(world, animalPos, 3)
+                    || isNearFence(world, animalPos, 3)) continue;
+
             candidates.add(animal);
         }
 
@@ -464,6 +471,23 @@ public class AnomalyEventHandler {
 
         EntityAnimal target = candidates.get(world.rand.nextInt(candidates.size()));
         target.setDead();
+    }
+
+    private boolean isNearFence(World world, BlockPos center, int radius) {
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -1; y <= 2; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    BlockPos check = center.add(x, y, z);
+                    if (!world.isBlockLoaded(check)) continue;
+
+                    Block block = world.getBlockState(check).getBlock();
+                    if (block instanceof BlockFence || block instanceof BlockFenceGate) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void playCreepyNoise(EntityPlayer player) {
