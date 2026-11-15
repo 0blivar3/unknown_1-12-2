@@ -60,14 +60,22 @@ public class MaskedGirlEventHandler {
     private static final int HAUNTING_DURATION = 3 * 24000;
 
     private static final String[][] THREAT_MESSAGES = {
-            {"YOU USED IT", "SHE SAW YOU", "", ""},
-            {"DONT TURN", "BACK", "", ""},
-            {"NOT YOURS", "TO USE", "", ""},
-            {"SHE IS", "ALREADY HERE", "", ""},
-            {"YOU LET", "HER IN", "", ""},
-            {"WE FOLLOW", "YOU HOME", "", ""},
-            {"TOO LATE", "TO HIDE", "", ""},
-            {"DO NOT", "LOOK BACK", "", ""}
+            {"I HEARD YOU", "BEFORE YOU", "ARRIVED", ""},
+            {"THEY KNOW", "YOU ARE HERE", "", ""},
+            {"THAT WAS", "NOT THE WIND", ""},
+            {"SHE LEFT", "IT OPEN", "", ""},
+            {"YOU COUNTED", "WRONG", "", ""},
+            {"DONT FOLLOW", "THE STEPS", "", ""},
+            {"ONE IS", "MISSING", "", ""},
+            {"STAY AWAY", "FROM THE", "WINDOWS", ""},
+            {"I WAS HERE", "ALL NIGHT", "", ""},
+            {"THE WOODS", "ARE QUIET", "NOW", ""},
+            {"YOU BUILT", "THE WRONG", "THING", ""},
+            {"SHE IS", "BEHIND YOU", "", ""},
+            {"IT KNOWS", "YOUR ROUTE", "", ""},
+            {"NO ONE", "LIVES HERE", "", ""},
+            {"WHY DID", "YOU ANSWER", "", ""},
+            {"DONT LET", "IT INSIDE", "", ""}
     };
 
     @SubscribeEvent
@@ -366,24 +374,33 @@ public class MaskedGirlEventHandler {
     private boolean performHauntingEvent(EntityPlayer player, int stage) {
         Random random = player.world.rand;
         int choice = random.nextInt(100);
+
         if (stage == 1) {
-            if (choice < 30 && !hasActiveGirl(player)) return spawnGirl(player, stage);
-            if (choice < 55) { playDistantFootsteps(player); return true; }
-            if (choice < 82) { makeAnimalsFollow(player); return true; }
-            return placeThreatSign(player);
-        }
-        if (stage == 2) {
             if (choice < 22 && !hasActiveGirl(player)) return spawnGirl(player, stage);
-            if (choice < 42) return openNearbyDoor(player);
-            if (choice < 62) return killNearbyMob(player);
-            if (choice < 82) { playDistantFootsteps(player); return true; }
-            if (choice < 92) { makeAnimalsFollow(player); return true; }
+            if (choice < 40) { playDistantFootsteps(player); return true; }
+            if (choice < 58) return makeAnimalsWatchSameDirection(player);
+            if (choice < 73) return playWoodKnock(player);
+            if (choice < 85) return extinguishNearbyTorch(player);
             return placeThreatSign(player);
         }
-        if (choice < 28 && !hasActiveGirl(player)) return spawnGirl(player, stage);
-        if (choice < 48) return openNearbyDoor(player);
-        if (choice < 68) return killNearbyMob(player);
-        if (choice < 84) { playDistantFootsteps(player); return true; }
+
+        if (stage == 2) {
+            if (choice < 18 && !hasActiveGirl(player)) return spawnGirl(player, stage);
+            if (choice < 34) return openNearbyDoor(player);
+            if (choice < 49) return killNearbyMob(player);
+            if (choice < 61) { playDistantFootsteps(player); return true; }
+            if (choice < 72) return openNearbyPassage(player);
+            if (choice < 82) return playChestSound(player);
+            if (choice < 91) return makeAnimalsWatchSameDirection(player);
+            return placeThreatSign(player);
+        }
+
+        if (choice < 20 && !hasActiveGirl(player)) return spawnGirl(player, stage);
+        if (choice < 36) return openNearbyDoor(player);
+        if (choice < 52) return killNearbyMob(player);
+        if (choice < 65) { playDistantFootsteps(player); return true; }
+        if (choice < 76) return extinguishNearbyTorch(player);
+        if (choice < 87) return playWoodKnock(player);
         return placeThreatSign(player);
     }
 
@@ -518,6 +535,137 @@ public class MaskedGirlEventHandler {
                 SoundCategory.BLOCKS, 0.55F, 1.0F);
     }
 
+    /** A short, spatially localized knock from a nearby wooden surface. */
+    private boolean playWoodKnock(EntityPlayer player) {
+        World world = player.world;
+        double angle = world.rand.nextDouble() * Math.PI * 2.0D;
+        double distance = 7.0D + world.rand.nextDouble() * 9.0D;
+        BlockPos soundPos = new BlockPos(
+                player.posX + Math.cos(angle) * distance,
+                player.posY + world.rand.nextInt(3) - 1,
+                player.posZ + Math.sin(angle) * distance);
+        if (!world.isBlockLoaded(soundPos)) return false;
+
+        world.playSound(null, soundPos, SoundEvents.BLOCK_WOOD_HIT,
+                SoundCategory.BLOCKS, 0.75F, 0.65F + world.rand.nextFloat() * 0.2F);
+        return true;
+    }
+
+    /** Occasionally removes one ordinary torch, as if something snuffed it out. */
+    private boolean extinguishNearbyTorch(EntityPlayer player) {
+        World world = player.world;
+        BlockPos base = player.getPosition();
+        List<BlockPos> torches = new ArrayList<>();
+        for (int x = -12; x <= 12; x++) {
+            for (int y = -2; y <= 4; y++) {
+                for (int z = -12; z <= 12; z++) {
+                    BlockPos pos = base.add(x, y, z);
+                    if (!world.isBlockLoaded(pos) || world.getBlockState(pos).getBlock() != Blocks.TORCH) continue;
+                    if (pos.distanceSq(player.getPosition()) < 25.0D) continue;
+                    if (isNearPlayerStructure(world, pos, 2)) continue;
+                    torches.add(pos);
+                }
+            }
+        }
+        if (torches.isEmpty()) return false;
+
+        BlockPos target = torches.get(world.rand.nextInt(torches.size()));
+        if (!world.setBlockToAir(target)) return false;
+        world.playSound(null, target, SoundEvents.BLOCK_FIRE_EXTINGUISH,
+                SoundCategory.BLOCKS, 0.55F, 0.8F + world.rand.nextFloat() * 0.25F);
+        return true;
+    }
+
+    /** Makes a small group of animals stare in one shared direction. */
+    private boolean makeAnimalsWatchSameDirection(EntityPlayer player) {
+        World world = player.world;
+        List<EntityAnimal> candidates = world.getEntitiesWithinAABB(
+                EntityAnimal.class, player.getEntityBoundingBox().grow(30.0D, 8.0D, 30.0D));
+        List<EntityAnimal> eligible = new ArrayList<>();
+        for (EntityAnimal animal : candidates) {
+            if (animal.isDead || animal instanceof EntityTameable || animal instanceof EntityHorse
+                    || animal.hasCustomName() || animal.getLeashed()) continue;
+            if (animal.getDistanceSq(player) < 49.0D || animal.getDistanceSq(player) > 900.0D) continue;
+            if (isNearPlayerStructure(world, animal.getPosition(), 4)) continue;
+            eligible.add(animal);
+        }
+        if (eligible.size() < 2) return false;
+
+        Random random = world.rand;
+        float sharedYaw = random.nextFloat() * 360.0F - 180.0F;
+        int count = Math.min(eligible.size(), 3 + random.nextInt(4));
+        for (int i = 0; i < count; i++) {
+            EntityAnimal animal = eligible.remove(random.nextInt(eligible.size()));
+            animal.getNavigator().clearPath();
+            animal.rotationYaw = sharedYaw;
+            animal.prevRotationYaw = sharedYaw;
+            animal.rotationYawHead = sharedYaw;
+            animal.renderYawOffset = sharedYaw;
+        }
+        return true;
+    }
+
+    /** Plays a chest-opening sound at a real chest without changing its contents. */
+    private boolean playChestSound(EntityPlayer player) {
+        World world = player.world;
+        BlockPos base = player.getPosition();
+        List<BlockPos> chests = new ArrayList<>();
+        for (int x = -18; x <= 18; x++) {
+            for (int y = -3; y <= 4; y++) {
+                for (int z = -18; z <= 18; z++) {
+                    BlockPos pos = base.add(x, y, z);
+                    if (world.isBlockLoaded(pos) && world.getBlockState(pos).getBlock() == Blocks.CHEST) {
+                        chests.add(pos);
+                    }
+                }
+            }
+        }
+        if (chests.isEmpty()) return false;
+        BlockPos chest = chests.get(world.rand.nextInt(chests.size()));
+        world.playSound(null, chest, SoundEvents.BLOCK_CHEST_OPEN,
+                SoundCategory.BLOCKS, 0.65F, 0.8F + world.rand.nextFloat() * 0.25F);
+        return true;
+    }
+
+    /** Opens a nearby trapdoor or fence gate and plays its corresponding vanilla level event. */
+    private boolean openNearbyPassage(EntityPlayer player) {
+        World world = player.world;
+        BlockPos base = player.getPosition();
+        List<BlockPos> candidates = new ArrayList<>();
+        for (int x = -16; x <= 16; x++) {
+            for (int y = -3; y <= 4; y++) {
+                for (int z = -16; z <= 16; z++) {
+                    BlockPos pos = base.add(x, y, z);
+                    if (!world.isBlockLoaded(pos)) continue;
+                    net.minecraft.block.Block block = world.getBlockState(pos).getBlock();
+                    if (block instanceof net.minecraft.block.BlockTrapDoor
+                            && !world.getBlockState(pos).getValue(net.minecraft.block.BlockTrapDoor.OPEN)) {
+                        candidates.add(pos);
+                    } else if (block instanceof net.minecraft.block.BlockFenceGate
+                            && !world.getBlockState(pos).getValue(net.minecraft.block.BlockFenceGate.OPEN)) {
+                        candidates.add(pos);
+                    }
+                }
+            }
+        }
+        if (candidates.isEmpty()) return false;
+
+        BlockPos pos = candidates.get(world.rand.nextInt(candidates.size()));
+        net.minecraft.block.Block block = world.getBlockState(pos).getBlock();
+        net.minecraft.block.state.IBlockState state = world.getBlockState(pos);
+        if (!world.setBlockState(pos, state.withProperty(
+                block instanceof net.minecraft.block.BlockTrapDoor
+                        ? net.minecraft.block.BlockTrapDoor.OPEN
+                        : net.minecraft.block.BlockFenceGate.OPEN, true), 2)) {
+            return false;
+        }
+
+        int eventId = block instanceof net.minecraft.block.BlockFenceGate ? 1009
+                : block == Blocks.IRON_TRAPDOOR ? 1013 : 1007;
+        world.playEvent(null, eventId, pos, 0);
+        return true;
+    }
+
     private void makeAnimalsFollow(EntityPlayer player) {
         World world = player.world;
         List<EntityAnimal> candidates = world.getEntitiesWithinAABB(
@@ -603,15 +751,18 @@ public class MaskedGirlEventHandler {
         }
         if (doors.isEmpty()) return false;
 
-        BlockPos doorPos = doors.get(world.rand.nextInt(doors.size()));
-        net.minecraft.block.Block doorBlock = world.getBlockState(doorPos).getBlock();
-        if (!world.setBlockState(doorPos,
-                world.getBlockState(doorPos).withProperty(net.minecraft.block.BlockDoor.OPEN, true), 2)) {
-            return false;
-        }
+        int count = Math.min(doors.size(), world.rand.nextInt(3) == 0 ? 2 : 1);
+        for (int i = 0; i < count; i++) {
+            BlockPos doorPos = doors.remove(world.rand.nextInt(doors.size()));
+            net.minecraft.block.Block doorBlock = world.getBlockState(doorPos).getBlock();
+            if (!world.setBlockState(doorPos,
+                    world.getBlockState(doorPos).withProperty(net.minecraft.block.BlockDoor.OPEN, true), 2)) {
+                continue;
+            }
 
-        // Vanilla level events use distinct sounds for wooden and iron doors.
-        world.playEvent(null, doorBlock == Blocks.IRON_DOOR ? 1011 : 1005, doorPos, 0);
+            // Vanilla level events use distinct sounds for wooden and iron doors.
+            world.playEvent(null, doorBlock == Blocks.IRON_DOOR ? 1011 : 1005, doorPos, 0);
+        }
         return true;
     }
 
