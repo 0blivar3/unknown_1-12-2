@@ -412,9 +412,9 @@ public class WatcherEventHandler {
         for (int x = -3; x <= 3; x++) {
             for (int z = -3; z <= 3; z++) {
                 for (int y = -1; y <= 4; y++) {
-                    IBlockState state = player.world.getBlockState(
-                            pos.add(x, y, z)
-                    );
+                    BlockPos check = pos.add(x, y, z);
+                    if (!player.world.isBlockLoaded(check)) continue;
+                    IBlockState state = player.world.getBlockState(check);
                     Material material = state.getMaterial();
 
                     if (material == Material.LEAVES || material == Material.WOOD) {
