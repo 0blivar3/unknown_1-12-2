@@ -139,16 +139,33 @@ public class MaskedGirlEventHandler {
 
         for (int dx = -9; dx <= 9; dx++) {
             for (int dz = -9; dz <= 9; dz++) {
-                BlockPos center = placed.add(dx, 0, dz);
-                if (!world.isBlockLoaded(center) || !isRitualComplete(world, center)) continue;
+                for (int dy = -2; dy <= 2; dy++) {
+                    BlockPos center = placed.add(dx, dy, dz);
+                    if (!world.isBlockLoaded(center) || !isRitualComplete(world, center)) continue;
 
-                TileEntity tile = world.getTileEntity(center);
-                if (tile == null) continue;
-                if (tile.getTileData().getBoolean(RITUAL_ACTIVATED_TAG)) continue;
+                    TileEntity tile = world.getTileEntity(center);
+                    if (tile == null) continue;
+                    if (tile.getTileData().getBoolean(RITUAL_ACTIVATED_TAG)) continue;
 
-                tile.getTileData().setBoolean(RITUAL_ACTIVATED_TAG, true);
-                beginHaunting(player);
-                return;
+                    tile.getTileData().setBoolean(RITUAL_ACTIVATED_TAG, true);
+                    beginHaunting(player);
+                    player.sendMessage(new TextComponentString("§4[UNKNOWN] §cРитуал завершён. Она услышала тебя."));
+                    return;
+                }
+            }
+        }
+
+        // Временная диагностика: если рядом есть голова игрока, сообщаем,
+        // что событие установки сработало, но полная схема не совпала.
+        if (event.getPlacedBlock().getBlock() == Blocks.REDSTONE_WIRE
+                || event.getPlacedBlock().getBlock() == Blocks.REDSTONE_TORCH
+                || event.getPlacedBlock().getBlock() == Blocks.SKULL) {
+            BlockPos nearbyHead = findNearbyPlayerHead(world, placed);
+            if (nearbyHead != null) {
+                player.sendMessage(new TextComponentString(
+                        "§4[UNKNOWN DEBUG] §cГолова найдена на " + nearbyHead
+                                + ", но схема ритуала не совпала. Проверь непрерывность линий редстоуна и опоры."
+                ));
             }
         }
     }
@@ -164,16 +181,32 @@ public class MaskedGirlEventHandler {
         World world = event.getWorld();
         BlockPos broken = event.getPos();
 
-        for (int dx = -6; dx <= 6; dx++) {
-            for (int dz = -6; dz <= 6; dz++) {
-                BlockPos center = broken.add(dx, 0, dz);
-                if (!world.isBlockLoaded(center) || !isPlayerHead(world, center)) continue;
-                if (!isRitualComponent(center, broken)) continue;
+        for (int dx = -9; dx <= 9; dx++) {
+            for (int dz = -9; dz <= 9; dz++) {
+                for (int dy = -2; dy <= 2; dy++) {
+                    BlockPos center = broken.add(dx, dy, dz);
+                    if (!world.isBlockLoaded(center) || !isPlayerHead(world, center)) continue;
+                    if (!isRitualComponent(center, broken)) continue;
 
-                TileEntity tile = world.getTileEntity(center);
-                if (tile != null) tile.getTileData().removeTag(RITUAL_ACTIVATED_TAG);
+                    TileEntity tile = world.getTileEntity(center);
+                    if (tile != null) tile.getTileData().removeTag(RITUAL_ACTIVATED_TAG);
+                }
             }
         }
+    }
+
+    private BlockPos findNearbyPlayerHead(World world, BlockPos origin) {
+        for (int dx = -9; dx <= 9; dx++) {
+            for (int dy = -2; dy <= 2; dy++) {
+                for (int dz = -9; dz <= 9; dz++) {
+                    BlockPos candidate = origin.add(dx, dy, dz);
+                    if (world.isBlockLoaded(candidate) && isPlayerHead(world, candidate)) {
+                        return candidate;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private boolean isRitualComplete(World world, BlockPos center) {
