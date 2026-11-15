@@ -22,7 +22,8 @@ import org.apache.logging.log4j.Logger;
 @Mod(
         modid = UnknownMod.MODID,
         name = UnknownMod.NAME,
-        version = UnknownMod.VERSION
+        version = UnknownMod.VERSION,
+        guiFactory = "com.unknown.mod.client.gui.UnknownGuiFactory"
 )
 public class UnknownMod {
 
