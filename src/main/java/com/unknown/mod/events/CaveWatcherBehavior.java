@@ -5,6 +5,7 @@ import net.minecraft.block.material.Material;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
@@ -63,6 +64,12 @@ public final class CaveWatcherBehavior {
             double dz = candidate.getZ() + 0.5D - player.posZ;
             double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
             if (horizontalDistance < minDistance || horizontalDistance > maxDistance) continue;
+
+            Vec3d eyes = player.getPositionEyes(1.0F);
+            Vec3d target = new Vec3d(candidate.getX() + 0.5D,
+                    candidate.getY() + 0.9D, candidate.getZ() + 0.5D);
+            Vec3d direction = target.subtract(eyes).normalize();
+            if (player.getLook(1.0F).dotProduct(direction) > 0.75D) continue;
 
             return candidate;
         }
