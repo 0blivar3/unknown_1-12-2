@@ -100,9 +100,9 @@ public final class ModConfig {
                 "Множитель дистанции появления и перемещения Наблюдателя.");
 
         String watcher = "watcher";
-        watcherMinLifetimeSeconds = config.get(watcher, "minLifetimeSeconds", 8,
+        watcherMinLifetimeSeconds = config.get(watcher, "minLifetimeSeconds", 15,
                 "Минимальное время существования Наблюдателя в секундах.", 1, 120).getInt(15);
-        watcherMaxLifetimeSeconds = config.get(watcher, "maxLifetimeSeconds", 24,
+        watcherMaxLifetimeSeconds = config.get(watcher, "maxLifetimeSeconds", 90,
                 "Максимальное время существования Наблюдателя в секундах.", 1, 180).getInt(90);
         if (watcherMaxLifetimeSeconds < watcherMinLifetimeSeconds) {
             watcherMaxLifetimeSeconds = watcherMinLifetimeSeconds;
