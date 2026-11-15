@@ -1,33 +1,35 @@
 package com.unknown.mod.entity;
 
 import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.ai.EntityAIAttackMelee;
 import net.minecraft.entity.monster.EntityMob;
 import net.minecraft.world.World;
 
 /**
- * Тихая сущность, которая появляется после завершения ритуала.
- * Не атакует, не преследует игрока и не имеет собственного ИИ.
+ * The masked girl is normally a silent, distant observer.
+ * Her melee task is only activated by MaskedGirlEventHandler during stage III.
  */
 public class EntityMaskedGirl extends EntityMob {
 
     public EntityMaskedGirl(World worldIn) {
         super(worldIn);
         setSize(0.6F, 1.8F);
-        setNoAI(true);
+        setNoAI(false);
         setSilent(true);
         enablePersistence();
     }
 
     @Override
     protected void initEntityAI() {
-        // Персонаж только наблюдает за игроком.
+        tasks.addTask(2, new EntityAIAttackMelee(this, 1.15D, false));
     }
 
     @Override
     protected void applyEntityAttributes() {
         super.applyEntityAttributes();
         getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(20.0D);
-        getEntityAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).setBaseValue(0.0D);
+        getEntityAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).setBaseValue(0.32D);
+        getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).setBaseValue(4.0D);
     }
 
     @Override
