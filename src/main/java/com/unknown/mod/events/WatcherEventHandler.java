@@ -597,7 +597,12 @@ public class WatcherEventHandler {
                                 + (pz - player.posZ) * (pz - player.posZ)
                 );
 
-                if (actualDistance < 35.0D || actualDistance > 75.0D) continue;
+                // Учитываем переданную дистанцию, включая пользовательский множитель.
+                // Раньше здесь были жёстко зашиты 35–75 блоков, из-за чего
+                // архитектурные появления игнорировали настройки дистанции.
+                double minDistance = Math.max(8.0D, distance - 2.0D);
+                double maxDistance = distance + 2.0D;
+                if (actualDistance < minDistance || actualDistance > maxDistance) continue;
 
                 if (avoidView) {
                     Vec3d eyes = player.getPositionEyes(1.0F);
