@@ -1,0 +1,119 @@
+package com.unknown.mod;
+
+import net.minecraftforge.common.config.Configuration;
+
+import java.io.File;
+
+/**
+ * Настройки UNKNOWN. Значения по умолчанию сохраняют баланс первой версии.
+ */
+public final class ModConfig {
+
+    private static Configuration config;
+
+    public static boolean mysteryEnabled = true;
+    public static boolean anomaliesEnabled = true;
+
+    public static boolean watcherEnabled = true;
+
+    public static boolean signAnomaly = true;
+    public static boolean torchAnomaly = true;
+    public static boolean creepyNoiseAnomaly = true;
+    public static boolean footstepsAnomaly = true;
+    public static boolean lonelyBlockAnomaly = true;
+    public static boolean presenceTraceAnomaly = true;
+    public static boolean openDoorAnomaly = true;
+    public static boolean animalBehaviorAnomaly = true;
+    public static boolean animalDisappearanceAnomaly = true;
+    public static boolean ghastScreamAnomaly = true;
+
+    public static int mysteryStartDay = 2;
+    public static int daysPerMysteryLevel = 1;
+    public static int maxMysteryLevel = 6;
+
+    public static double anomalyCooldownMultiplier = 1.0D;
+    public static double anomalyChanceMultiplier = 1.0D;
+    public static double watcherCooldownMultiplier = 1.0D;
+    public static double watcherChanceMultiplier = 1.0D;
+    public static double watcherDistanceMultiplier = 1.0D;
+
+    public static int watcherMinLifetimeSeconds = 8;
+    public static int watcherMaxLifetimeSeconds = 24;
+
+    private ModConfig() {
+    }
+
+    public static void load(File file) {
+        config = new Configuration(file);
+        sync();
+    }
+
+    public static void sync() {
+        if (config == null) return;
+
+        config.load();
+
+        String general = "general";
+        mysteryEnabled = config.get(general, "mysteryEnabled", true,
+                "Включает общую систему постепенного появления мистики.").getBoolean(true);
+        anomaliesEnabled = config.get(general, "anomaliesEnabled", true,
+                "Глобально включает или отключает все случайные аномалии.").getBoolean(true);
+
+        String characters = "characters";
+        watcherEnabled = config.get(characters, "watcherEnabled", true,
+                "Разрешает появление и существование Наблюдателя.").getBoolean(true);
+
+        String anomalies = "anomalies";
+        signAnomaly = getBoolean(anomalies, "signs", true, "Появление загадочных табличек.");
+        torchAnomaly = getBoolean(anomalies, "torches", true, "Появление и исчезновение факелов.");
+        creepyNoiseAnomaly = getBoolean(anomalies, "creepyNoise", true, "Случайные тревожные звуки.");
+        footstepsAnomaly = getBoolean(anomalies, "footsteps", true, "Ложные шаги поблизости.");
+        lonelyBlockAnomaly = getBoolean(anomalies, "lonelyBlocks", true, "Появление одиноких блоков.");
+        presenceTraceAnomaly = getBoolean(anomalies, "presenceTraces", true, "Появление небольших следов присутствия.");
+        openDoorAnomaly = getBoolean(anomalies, "openDoors", true, "Самопроизвольное открытие дверей.");
+        animalBehaviorAnomaly = getBoolean(anomalies, "animalBehavior", true, "Странное поведение мирных животных.");
+        animalDisappearanceAnomaly = getBoolean(anomalies, "animalDisappearance", true, "Бесследное исчезновение животных.");
+        ghastScreamAnomaly = getBoolean(anomalies, "distantGhastScream", true, "Далёкий крик гаста без появления самого гаста.");
+
+        String progression = "progression";
+        mysteryStartDay = config.get(progression, "startDay", 2, 1, 1000,
+                "Игровой день, начиная с которого начинается мистика.").getInt(2);
+        daysPerMysteryLevel = config.get(progression, "daysPerLevel", 1, 1, 100,
+                "Количество игровых дней на повышение одного уровня мистики.").getInt(1);
+        maxMysteryLevel = config.get(progression, "maxLevel", 6, 1, 6,
+                "Максимальный уровень мистики (от 1 до 6).").getInt(6);
+
+        String frequency = "frequency";
+        anomalyCooldownMultiplier = getMultiplier(frequency, "anomalyCooldownMultiplier",
+                "Множитель частоты проверок аномалий. Больше 1 — чаще.");
+        anomalyChanceMultiplier = getMultiplier(frequency, "anomalyChanceMultiplier",
+                "Множитель шанса срабатывания аномалии.");
+        watcherCooldownMultiplier = getMultiplier(frequency, "watcherCooldownMultiplier",
+                "Множитель частоты проверок появления Наблюдателя. Больше 1 — чаще.");
+        watcherChanceMultiplier = getMultiplier(frequency, "watcherChanceMultiplier",
+                "Множитель шанса появления Наблюдателя.");
+        watcherDistanceMultiplier = getMultiplier(frequency, "watcherDistanceMultiplier",
+                "Множитель дистанции появления и перемещения Наблюдателя.");
+
+        String watcher = "watcher";
+        watcherMinLifetimeSeconds = config.get(watcher, "minLifetimeSeconds", 8, 1, 120,
+                "Минимальное время существования Наблюдателя в секундах.").getInt(8);
+        watcherMaxLifetimeSeconds = config.get(watcher, "maxLifetimeSeconds", 24, 1, 180,
+                "Максимальное время существования Наблюдателя в секундах.").getInt(24);
+        if (watcherMaxLifetimeSeconds < watcherMinLifetimeSeconds) {
+            watcherMaxLifetimeSeconds = watcherMinLifetimeSeconds;
+        }
+
+        if (config.hasChanged()) {
+            config.save();
+        }
+    }
+
+    private static boolean getBoolean(String category, String key, boolean defaultValue, String comment) {
+        return config.get(category, key, defaultValue, comment).getBoolean(defaultValue);
+    }
+
+    private static double getMultiplier(String category, String key, String comment) {
+        return config.get(category, key, 1.0D, 0.1D, 5.0D, comment).getDouble(1.0D);
+    }
+}
