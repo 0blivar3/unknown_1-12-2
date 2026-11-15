@@ -1,5 +1,6 @@
 package com.unknown.mod.events;
 
+import com.unknown.mod.ModConfig;
 import net.minecraft.world.World;
 
 import java.util.Random;
@@ -19,8 +20,14 @@ public final class MysteryProgression {
      * 1 — второй день, далее уровень растёт каждый день до максимума.
      */
     public static int getLevel(World world) {
-        long elapsedDays = world.getTotalWorldTime() / 24000L;
-        return (int) Math.min(6L, elapsedDays);
+        if (!ModConfig.mysteryEnabled) return 0;
+
+        long currentDay = world.getTotalWorldTime() / 24000L + 1L;
+        if (currentDay < ModConfig.mysteryStartDay) return 0;
+
+        long level = ((currentDay - ModConfig.mysteryStartDay)
+                / ModConfig.daysPerMysteryLevel) + 1L;
+        return (int) Math.min((long) ModConfig.maxMysteryLevel, level);
     }
 
     public static int getWatcherCooldown(Random random, int level) {
@@ -34,24 +41,26 @@ public final class MysteryProgression {
             default: min = 3000; max = 5400; break;
         }
 
-        return min + random.nextInt(max - min + 1);
+        int cooldown = min + random.nextInt(max - min + 1);
+        return Math.max(1, (int) Math.round(cooldown / ModConfig.watcherCooldownMultiplier));
     }
 
     public static int getWatcherChance(int level, int encounters) {
         int baseChance = 2 + Math.max(0, level - 1) * 2;
-        return Math.min(18, baseChance + encounters);
+        int chance = Math.min(18, baseChance + encounters);
+        return Math.min(100, (int) Math.round(chance * ModConfig.watcherChanceMultiplier));
     }
 
     public static double getWatcherSpawnDistance(Random random, int level) {
         int stage = Math.min(5, Math.max(0, level - 1));
         int minimum = 55 + stage * 7;
-        return minimum + random.nextInt(21);
+        return (minimum + random.nextInt(21)) * ModConfig.watcherDistanceMultiplier;
     }
 
     public static int getWatcherRelocationDistance(Random random, int level) {
         int stage = Math.min(5, Math.max(0, level - 1));
         int minimum = 45 + stage * 6;
-        return minimum + random.nextInt(21);
+        return (int) Math.round((minimum + random.nextInt(21)) * ModConfig.watcherDistanceMultiplier);
     }
 
     public static int getAnomalyCooldown(Random random, int level) {
@@ -65,16 +74,19 @@ public final class MysteryProgression {
             default: min = 2400; max = 4800; break;
         }
 
-        return min + random.nextInt(max - min + 1);
+        int cooldown = min + random.nextInt(max - min + 1);
+        return Math.max(1, (int) Math.round(cooldown / ModConfig.anomalyCooldownMultiplier));
     }
 
     public static int getAnomalyChance(int level) {
+        int chance;
         switch (level) {
-            case 1: return 20;
-            case 2: return 35;
-            case 3: return 50;
-            case 4: return 65;
-            default: return 75;
+            case 1: chance = 20; break;
+            case 2: chance = 35; break;
+            case 3: chance = 50; break;
+            case 4: chance = 65; break;
+            default: chance = 75; break;
         }
+        return Math.min(100, (int) Math.round(chance * ModConfig.anomalyChanceMultiplier));
     }
 }
