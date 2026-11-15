@@ -16,6 +16,7 @@ public final class ModConfig {
     public static boolean anomaliesEnabled = true;
 
     public static boolean watcherEnabled = true;
+    public static boolean maskedGirlEnabled = true;
 
     public static boolean signAnomaly = true;
     public static boolean torchAnomaly = true;
@@ -67,6 +68,8 @@ public final class ModConfig {
         String characters = "characters";
         watcherEnabled = config.get(characters, "watcherEnabled", true,
                 "Разрешает появление и существование Наблюдателя.").getBoolean(true);
+        maskedGirlEnabled = config.get(characters, "maskedGirlEnabled", true,
+                "Разрешает последствия активации Тотема и появление девушки в маске.").getBoolean(true);
 
         String anomalies = "anomalies";
         signAnomaly = getBoolean(anomalies, "signs", true, "Появление загадочных табличек.");
