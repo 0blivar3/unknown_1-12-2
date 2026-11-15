@@ -149,25 +149,11 @@ public class MaskedGirlEventHandler {
 
                     tile.getTileData().setBoolean(RITUAL_ACTIVATED_TAG, true);
                     beginHaunting(player);
-                    player.sendMessage(new TextComponentString("§4[UNKNOWN] §cРитуал завершён. Она услышала тебя."));
                     return;
                 }
             }
         }
 
-        // Временная диагностика: если рядом есть голова игрока, сообщаем,
-        // что событие установки сработало, но полная схема не совпала.
-        if (event.getPlacedBlock().getBlock() == Blocks.REDSTONE_WIRE
-                || event.getPlacedBlock().getBlock() == Blocks.REDSTONE_TORCH
-                || event.getPlacedBlock().getBlock() == Blocks.SKULL) {
-            BlockPos nearbyHead = findNearbyPlayerHead(world, placed);
-            if (nearbyHead != null) {
-                player.sendMessage(new TextComponentString(
-                        "§4[UNKNOWN DEBUG] §cГолова найдена на " + nearbyHead
-                                + ", но схема ритуала не совпала. Проверь непрерывность линий редстоуна и опоры."
-                ));
-            }
-        }
     }
 
     /**
