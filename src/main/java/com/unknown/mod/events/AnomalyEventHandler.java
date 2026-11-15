@@ -592,7 +592,10 @@ public class AnomalyEventHandler {
                     : new BlockPos(x, player.posY, z);
             if (!world.isBlockLoaded(pos)) continue;
 
-            world.playSound(null, pos, SoundEvents.BLOCK_GRASS_STEP,
+            world.playSound(null, pos,
+                    world.canSeeSky(player.getPosition())
+                            ? SoundEvents.BLOCK_GRASS_STEP
+                            : SoundEvents.BLOCK_STONE_STEP,
                     SoundCategory.BLOCKS, 0.45F, 1.0F);
         }
     }
