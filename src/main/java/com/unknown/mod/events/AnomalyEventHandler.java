@@ -252,6 +252,10 @@ public class AnomalyEventHandler {
     }
 
     private boolean hasNearbyPlayerStructure(World world, BlockPos center, int radius) {
+        return hasNearbyPlayerStructure(world, center, radius, false);
+    }
+
+    private boolean hasNearbyPlayerStructure(World world, BlockPos center, int radius, boolean ignoreDoors) {
         for (int x = -radius; x <= radius; x++) {
             for (int y = -2; y <= 3; y++) {
                 for (int z = -radius; z <= radius; z++) {
@@ -264,7 +268,8 @@ public class AnomalyEventHandler {
                             || block == Blocks.CRAFTING_TABLE || block == Blocks.FURNACE
                             || block == Blocks.CHEST || block == Blocks.STANDING_SIGN
                             || block == Blocks.WALL_SIGN || block == Blocks.GLASS
-                            || block == Blocks.GLASS_PANE || block instanceof BlockDoor) {
+                            || block == Blocks.GLASS_PANE
+                            || (!ignoreDoors && block instanceof BlockDoor)) {
                         return true;
                     }
                 }
@@ -344,13 +349,23 @@ public class AnomalyEventHandler {
 
             if (!world.isBlockLoaded(pos) || !world.isBlockLoaded(pos.up())) continue;
 
-            if (world.getBlockState(pos).getBlock() instanceof BlockDoor) {
-                if (world.getBlockState(pos).getValue(BlockDoor.OPEN)) continue;
+            IBlockState state = world.getBlockState(pos);
+            if (!(state.getBlock() instanceof BlockDoor)) continue;
 
-                world.setBlockState(pos,
-                        world.getBlockState(pos).withProperty(BlockDoor.OPEN, true), 3);
-                return;
-            }
+            BlockDoor door = (BlockDoor) state.getBlock();
+            BlockPos lowerPos = state.getValue(BlockDoor.HALF) == BlockDoor.EnumDoorHalf.UPPER
+                    ? pos.down() : pos;
+            if (!world.isBlockLoaded(lowerPos) || !world.isBlockLoaded(lowerPos.up())) continue;
+
+            IBlockState lowerState = world.getBlockState(lowerPos);
+            if (lowerState.getBlock() != door || lowerState.getValue(BlockDoor.OPEN)) continue;
+
+            // Не открываем двери, встроенные в постройки игрока.
+            if (hasNearbyPlayerStructure(world, lowerPos, 3, true)) continue;
+
+            // toggleDoor корректно обрабатывает верхнюю и нижнюю половины двери.
+            door.toggleDoor(world, pos, true);
+            return;
         }
     }
 
@@ -433,7 +448,8 @@ public class AnomalyEventHandler {
         for (EntityAnimal animal : world.getEntitiesWithinAABB(
                 EntityAnimal.class, player.getEntityBoundingBox().grow(22.0D, 7.0D, 22.0D))) {
 
-            if (animal.isDead || animal instanceof EntityTameable || animal instanceof EntityHorse) {
+            if (animal.isDead || animal instanceof EntityTameable || animal instanceof EntityHorse
+                    || animal.hasCustomName() || animal.getLeashed()) {
                 continue;
             }
 
@@ -522,7 +538,7 @@ public class AnomalyEventHandler {
         if (!world.isBlockLoaded(soundPos)) return;
 
         world.playSound(null, soundPos, SoundEvents.ENTITY_GHAST_SCREAM,
-                SoundCategory.HOSTILE, 2.5F, 0.78F + random.nextFloat() * 0.28F);
+                SoundCategory.HOSTILE, 2.5F, 1.0F);
     }
 
     private void playFootsteps(EntityPlayer player) {
@@ -561,6 +577,8 @@ public class AnomalyEventHandler {
             if (!world.isAirBlock(pos)) continue;
             if (!world.getBlockState(pos.down()).getMaterial().blocksMovement()) continue;
             if (world.getBlockState(pos.down()).getMaterial().isLiquid()) continue;
+            // Не размещаем аномалии вплотную к постройкам и хранилищам игрока.
+            if (hasNearbyPlayerStructure(world, pos, 3)) continue;
 
             return pos;
         }
