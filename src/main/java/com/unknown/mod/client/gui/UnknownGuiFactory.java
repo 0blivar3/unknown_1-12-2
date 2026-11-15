@@ -40,6 +40,7 @@ public class UnknownGuiFactory implements IModGuiFactory {
                 parentScreen,
                 elements,
                 UnknownMod.MODID,
+                "main",
                 false,
                 false,
                 "UNKNOWN Configuration"
