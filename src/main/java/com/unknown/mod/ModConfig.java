@@ -76,12 +76,12 @@ public final class ModConfig {
         ghastScreamAnomaly = getBoolean(anomalies, "distantGhastScream", true, "Далёкий крик гаста без появления самого гаста.");
 
         String progression = "progression";
-        mysteryStartDay = config.get(progression, "startDay", 2, 1, 1000,
-                "Игровой день, начиная с которого начинается мистика.").getInt(2);
-        daysPerMysteryLevel = config.get(progression, "daysPerLevel", 1, 1, 100,
-                "Количество игровых дней на повышение одного уровня мистики.").getInt(1);
-        maxMysteryLevel = config.get(progression, "maxLevel", 6, 1, 6,
-                "Максимальный уровень мистики (от 1 до 6).").getInt(6);
+        mysteryStartDay = config.get(progression, "startDay", 2,
+                "Игровой день, начиная с которого начинается мистика.", 1, 1000).getInt(2);
+        daysPerMysteryLevel = config.get(progression, "daysPerLevel", 1,
+                "Количество игровых дней на повышение одного уровня мистики.", 1, 100).getInt(1);
+        maxMysteryLevel = config.get(progression, "maxLevel", 6,
+                "Максимальный уровень мистики (от 1 до 6).", 1, 6).getInt(6);
 
         String frequency = "frequency";
         anomalyCooldownMultiplier = getMultiplier(frequency, "anomalyCooldownMultiplier",
@@ -96,10 +96,10 @@ public final class ModConfig {
                 "Множитель дистанции появления и перемещения Наблюдателя.");
 
         String watcher = "watcher";
-        watcherMinLifetimeSeconds = config.get(watcher, "minLifetimeSeconds", 8, 1, 120,
-                "Минимальное время существования Наблюдателя в секундах.").getInt(8);
-        watcherMaxLifetimeSeconds = config.get(watcher, "maxLifetimeSeconds", 24, 1, 180,
-                "Максимальное время существования Наблюдателя в секундах.").getInt(24);
+        watcherMinLifetimeSeconds = config.get(watcher, "minLifetimeSeconds", 8,
+                "Минимальное время существования Наблюдателя в секундах.", 1, 120).getInt(8);
+        watcherMaxLifetimeSeconds = config.get(watcher, "maxLifetimeSeconds", 24,
+                "Максимальное время существования Наблюдателя в секундах.", 1, 180).getInt(24);
         if (watcherMaxLifetimeSeconds < watcherMinLifetimeSeconds) {
             watcherMaxLifetimeSeconds = watcherMinLifetimeSeconds;
         }
@@ -114,6 +114,6 @@ public final class ModConfig {
     }
 
     private static double getMultiplier(String category, String key, String comment) {
-        return config.get(category, key, 1.0D, 0.1D, 5.0D, comment).getDouble(1.0D);
+        return config.get(category, key, 1.0D, comment, 0.1D, 5.0D).getDouble(1.0D);
     }
 }
