@@ -179,12 +179,25 @@ public class MaskedGirlEventHandler {
     private boolean isRitualComplete(World world, BlockPos center) {
         if (!isPlayerHead(world, center)) return false;
 
-        // Внешний квадрат и четыре дорожки, идущие от головы к серединам сторон.
-        for (int dx = -5; dx <= 5; dx++) {
-            for (int dz = -5; dz <= 5; dz++) {
+        // Размер рамки определяем по самой постройке: это позволяет не зависеть
+        // от небольших отличий в масштабе ритуала.
+        for (int radius = 3; radius <= 8; radius++) {
+            if (!hasRedstoneCrossAndSquare(world, center, radius)) continue;
+            if (hasCornerTorches(world, center, radius)
+                    || hasCornerTorches(world, center, radius + 1)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean hasRedstoneCrossAndSquare(World world, BlockPos center, int radius) {
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
                 if (dx == 0 && dz == 0) continue;
 
-                boolean outerEdge = Math.abs(dx) == 5 || Math.abs(dz) == 5;
+                boolean outerEdge = Math.abs(dx) == radius || Math.abs(dz) == radius;
                 boolean radialLine = dx == 0 || dz == 0;
                 if (!outerEdge && !radialLine) continue;
 
@@ -196,10 +209,12 @@ public class MaskedGirlEventHandler {
                 }
             }
         }
+        return true;
+    }
 
-        // Четыре красных факела стоят по диагонали за углами редстоуновой рамки.
-        for (int dx : new int[] {-6, 6}) {
-            for (int dz : new int[] {-6, 6}) {
+    private boolean hasCornerTorches(World world, BlockPos center, int offset) {
+        for (int dx : new int[] {-offset, offset}) {
+            for (int dz : new int[] {-offset, offset}) {
                 BlockPos torchPos = center.add(dx, 0, dz);
                 if (!world.isBlockLoaded(torchPos)
                         || world.getBlockState(torchPos).getBlock() != Blocks.REDSTONE_TORCH
@@ -208,7 +223,6 @@ public class MaskedGirlEventHandler {
                 }
             }
         }
-
         return true;
     }
 
