@@ -6,7 +6,6 @@ import com.unknown.mod.UnknownMod;
 import com.unknown.mod.entity.EntityWatcher;
 import com.unknown.mod.client.RenderWatcher;
 
-import net.minecraft.client.renderer.entity.Render;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.minecraftforge.fml.client.event.ConfigChangedEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
