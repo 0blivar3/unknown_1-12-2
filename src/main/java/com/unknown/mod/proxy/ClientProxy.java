@@ -1,24 +1,29 @@
-
 package com.unknown.mod.proxy;
 
 import com.unknown.mod.ModConfig;
 import com.unknown.mod.UnknownMod;
-import com.unknown.mod.entity.EntityWatcher;
+import com.unknown.mod.client.RenderMaskedGirl;
 import com.unknown.mod.client.RenderWatcher;
+import com.unknown.mod.entity.EntityMaskedGirl;
+import com.unknown.mod.entity.EntityWatcher;
 
-import net.minecraftforge.fml.client.registry.RenderingRegistry;
-import net.minecraftforge.fml.client.event.ConfigChangedEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.client.event.ConfigChangedEvent;
+import net.minecraftforge.fml.client.registry.RenderingRegistry;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
 public class ClientProxy extends CommonProxy {
 
     @Override
     public void registerRenderers() {
-
         RenderingRegistry.registerEntityRenderingHandler(
                 EntityWatcher.class,
                 RenderWatcher::new
+        );
+
+        RenderingRegistry.registerEntityRenderingHandler(
+                EntityMaskedGirl.class,
+                RenderMaskedGirl::new
         );
 
         // ConfigChangedEvent относится к клиентской GUI-системе Forge.
