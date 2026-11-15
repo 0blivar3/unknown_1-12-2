@@ -69,7 +69,7 @@ public final class ModConfig {
         watcherEnabled = config.get(characters, "watcherEnabled", true,
                 "Разрешает появление и существование Наблюдателя.").getBoolean(true);
         maskedGirlEnabled = config.get(characters, "maskedGirlEnabled", true,
-                "Разрешает последствия активации Тотема и появление девушки в маске.").getBoolean(true);
+                "Разрешает активацию ритуала и появление девушки в маске.").getBoolean(true);
 
         String anomalies = "anomalies";
         signAnomaly = getBoolean(anomalies, "signs", true, "Появление загадочных табличек.");
