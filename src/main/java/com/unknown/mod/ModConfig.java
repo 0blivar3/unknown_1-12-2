@@ -107,6 +107,16 @@ public final class ModConfig {
                 "Максимальное время существования Наблюдателя в секундах.", 1, 180);
         watcherMinLifetimeSeconds = minLifetime.getInt(15);
         watcherMaxLifetimeSeconds = maxLifetime.getInt(90);
+
+        // Миграция старых значений по умолчанию (8–24 сек.) на согласованные 15–90 сек.
+        // Пользовательские значения не затрагиваются.
+        if (watcherMinLifetimeSeconds == 8 && watcherMaxLifetimeSeconds == 24) {
+            watcherMinLifetimeSeconds = 15;
+            watcherMaxLifetimeSeconds = 90;
+            minLifetime.set(watcherMinLifetimeSeconds);
+            maxLifetime.set(watcherMaxLifetimeSeconds);
+        }
+
         if (watcherMaxLifetimeSeconds < watcherMinLifetimeSeconds) {
             watcherMaxLifetimeSeconds = watcherMinLifetimeSeconds;
             maxLifetime.set(watcherMaxLifetimeSeconds);
