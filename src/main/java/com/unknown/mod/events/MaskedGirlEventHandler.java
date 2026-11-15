@@ -423,7 +423,7 @@ public class MaskedGirlEventHandler {
         girl.getEntityData().setBoolean(GIRL_TAG, true);
         girl.getEntityData().setString(OWNER_TAG, player.getUniqueID().toString());
         girl.getEntityData().setInteger(AGE_TAG, 0);
-        girl.getEntityData().setInteger(LIFETIME_TAG, 1200 + world.rand.nextInt(1801));
+        girl.getEntityData().setInteger(LIFETIME_TAG, stage >= 3 ? 5000 : 1200 + world.rand.nextInt(1801));
         girl.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
         girl.getEntityData().setInteger(ATTACK_STATE_TAG, 0);
         girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, 600 + world.rand.nextInt(1201));
