@@ -1,5 +1,6 @@
 package com.unknown.mod.events;
 
+import com.unknown.mod.ModConfig;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockDoor;
 import net.minecraft.block.BlockStandingSign;
@@ -87,7 +88,7 @@ public class AnomalyEventHandler {
         Random random = world.rand;
 
         int mysteryLevel = MysteryProgression.getLevel(world);
-        if (mysteryLevel <= 0) return;
+        if (mysteryLevel <= 0 || !ModConfig.anomaliesEnabled) return;
 
         int cooldown = player.getEntityData().getInteger(COOLDOWN_TAG);
 
@@ -113,10 +114,9 @@ public class AnomalyEventHandler {
             return;
         }
 
-        // Новые события открываются постепенно: день 2 — первые два,
-        // день 3 — дверь и животные, день 4 — исчезновение животных.
-        int anomalyCount = mysteryLevel == 1 ? 6 : (mysteryLevel == 2 ? 8 : 10);
-        int anomaly = random.nextInt(anomalyCount);
+        List<Integer> availableAnomalies = getAvailableAnomalies(mysteryLevel);
+        if (availableAnomalies.isEmpty()) return;
+        int anomaly = availableAnomalies.get(random.nextInt(availableAnomalies.size()));
 
         switch (anomaly) {
             case 0: spawnSign(player); break;
@@ -130,6 +130,32 @@ public class AnomalyEventHandler {
             case 8: makeAnimalDisappear(player); break;
             case 9: playDistantGhastScream(player); break;
             default: break;
+        }
+    }
+
+    private List<Integer> getAvailableAnomalies(int mysteryLevel) {
+        int unlockedCount = mysteryLevel == 1 ? 6 : (mysteryLevel == 2 ? 8 : 10);
+        List<Integer> available = new ArrayList<>();
+
+        for (int id = 0; id < unlockedCount; id++) {
+            if (isAnomalyEnabled(id)) available.add(id);
+        }
+        return available;
+    }
+
+    private boolean isAnomalyEnabled(int id) {
+        switch (id) {
+            case 0: return ModConfig.signAnomaly;
+            case 1: return ModConfig.torchAnomaly;
+            case 2: return ModConfig.creepyNoiseAnomaly;
+            case 3: return ModConfig.footstepsAnomaly;
+            case 4: return ModConfig.lonelyBlockAnomaly;
+            case 5: return ModConfig.presenceTraceAnomaly;
+            case 6: return ModConfig.openDoorAnomaly;
+            case 7: return ModConfig.animalBehaviorAnomaly;
+            case 8: return ModConfig.animalDisappearanceAnomaly;
+            case 9: return ModConfig.ghastScreamAnomaly;
+            default: return false;
         }
     }
 
