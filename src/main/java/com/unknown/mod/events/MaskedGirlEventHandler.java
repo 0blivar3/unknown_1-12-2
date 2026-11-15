@@ -62,7 +62,7 @@ public class MaskedGirlEventHandler {
     private static final String[][] THREAT_MESSAGES = {
             {"I HEARD YOU", "BEFORE YOU", "ARRIVED", ""},
             {"THEY KNOW", "YOU ARE HERE", "", ""},
-            {"THAT WAS", "NOT THE WIND", ""},
+            {"THAT WAS", "NOT THE WIND", "", ""},
             {"SHE LEFT", "IT OPEN", "", ""},
             {"YOU COUNTED", "WRONG", "", ""},
             {"DONT FOLLOW", "THE STEPS", "", ""},
