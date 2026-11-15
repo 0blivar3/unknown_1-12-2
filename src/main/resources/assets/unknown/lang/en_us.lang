@@ -1,0 +1,62 @@
+# UNKNOWN — English localization
+
+entity.unknown.watcher.name=Watcher
+
+config.category.unknown.general=General
+config.category.unknown.characters=Characters
+config.category.unknown.anomalies=Anomalies
+config.category.unknown.progression=Mystery Progression
+config.category.unknown.frequency=Event Frequency
+config.category.unknown.watcher=Watcher
+
+config.unknown.general.mysteryEnabled=Enable mystery system
+config.unknown.general.mysteryEnabled.tooltip=Enables the gradual progression of mysterious events.
+config.unknown.general.anomaliesEnabled=Enable anomalies
+config.unknown.general.anomaliesEnabled.tooltip=Master switch for all random anomalies.
+
+config.unknown.characters.watcherEnabled=Enable the Watcher
+config.unknown.characters.watcherEnabled.tooltip=Allows the Watcher to appear in the world.
+
+config.unknown.anomalies.signs=Mysterious signs
+config.unknown.anomalies.signs.tooltip=Allows strange signs to appear.
+config.unknown.anomalies.torches=Disappearing torches
+config.unknown.anomalies.torches.tooltip=Allows torches to appear and disappear.
+config.unknown.anomalies.creepyNoise=Creepy sounds
+config.unknown.anomalies.creepyNoise.tooltip=Allows occasional unsettling sounds.
+config.unknown.anomalies.footsteps=Footsteps
+config.unknown.anomalies.footsteps.tooltip=Allows fake footsteps to be heard nearby.
+config.unknown.anomalies.lonelyBlocks=Lonely blocks
+config.unknown.anomalies.lonelyBlocks.tooltip=Allows isolated blocks to appear.
+config.unknown.anomalies.presenceTraces=Traces of presence
+config.unknown.anomalies.presenceTraces.tooltip=Allows small signs that something was nearby.
+config.unknown.anomalies.openDoors=Open doors
+config.unknown.anomalies.openDoors.tooltip=Allows doors to open on their own.
+config.unknown.anomalies.animalBehavior=Strange animal behavior
+config.unknown.anomalies.animalBehavior.tooltip=Allows passive animals to behave strangely.
+config.unknown.anomalies.animalDisappearance=Animal disappearances
+config.unknown.anomalies.animalDisappearance.tooltip=Allows animals to disappear without a trace.
+config.unknown.anomalies.distantGhastScream=Distant ghast scream
+config.unknown.anomalies.distantGhastScream.tooltip=Plays a distant ghast scream without spawning a ghast.
+
+config.unknown.progression.startDay=Starting day
+config.unknown.progression.startDay.tooltip=The in-game day when mysterious events begin.
+config.unknown.progression.daysPerLevel=Days per mystery level
+config.unknown.progression.daysPerLevel.tooltip=Number of in-game days required to increase the mystery level.
+config.unknown.progression.maxLevel=Maximum mystery level
+config.unknown.progression.maxLevel.tooltip=Maximum progression level, from 1 to 6.
+
+config.unknown.frequency.anomalyCooldownMultiplier=Anomaly check frequency
+config.unknown.frequency.anomalyCooldownMultiplier.tooltip=Higher values make anomaly checks happen more often.
+config.unknown.frequency.anomalyChanceMultiplier=Anomaly chance
+config.unknown.frequency.anomalyChanceMultiplier.tooltip=Multiplier applied to the chance of an anomaly occurring.
+config.unknown.frequency.watcherCooldownMultiplier=Watcher check frequency
+config.unknown.frequency.watcherCooldownMultiplier.tooltip=Higher values make Watcher appearance checks happen more often.
+config.unknown.frequency.watcherChanceMultiplier=Watcher appearance chance
+config.unknown.frequency.watcherChanceMultiplier.tooltip=Multiplier applied to the chance of the Watcher appearing.
+config.unknown.frequency.watcherDistanceMultiplier=Watcher distance
+config.unknown.frequency.watcherDistanceMultiplier.tooltip=Multiplier for the Watcher's appearance and movement distance.
+
+config.unknown.watcher.minLifetimeSeconds=Minimum lifetime (seconds)
+config.unknown.watcher.minLifetimeSeconds.tooltip=Minimum time the Watcher remains in the world.
+config.unknown.watcher.maxLifetimeSeconds=Maximum lifetime (seconds)
+config.unknown.watcher.maxLifetimeSeconds.tooltip=Maximum time the Watcher remains in the world.
