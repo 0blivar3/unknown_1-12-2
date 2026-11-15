@@ -593,7 +593,10 @@ public class MaskedGirlEventHandler {
                     if (!world.isBlockLoaded(pos)) continue;
                     net.minecraft.block.Block block = world.getBlockState(pos).getBlock();
                     if (!(block instanceof net.minecraft.block.BlockDoor) || block == Blocks.IRON_DOOR) continue;
-                    if (world.getBlockState(pos).getValue(net.minecraft.block.BlockDoor.OPEN)) continue;
+                    net.minecraft.block.state.IBlockState doorState = world.getBlockState(pos);
+                    if (doorState.getValue(net.minecraft.block.BlockDoor.HALF)
+                            != net.minecraft.block.BlockDoor.EnumDoorHalf.LOWER) continue;
+                    if (doorState.getValue(net.minecraft.block.BlockDoor.OPEN)) continue;
                     doors.add(pos);
                 }
             }
