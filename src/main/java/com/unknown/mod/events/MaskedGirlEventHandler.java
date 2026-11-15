@@ -212,51 +212,71 @@ public class MaskedGirlEventHandler {
     private boolean isRitualComplete(World world, BlockPos center) {
         if (!isPlayerHead(world, center)) return false;
 
-        // Размер рамки определяем по самой постройке: это позволяет не зависеть
-        // от небольших отличий в масштабе ритуала.
-        for (int radius = 3; radius <= 8; radius++) {
-            if (!hasRedstoneCrossAndSquare(world, center, radius)) continue;
-            if (hasCornerTorches(world, center, radius)
-                    || hasCornerTorches(world, center, radius + 1)) {
+        // Four arms: exactly three redstone dust blocks from the head
+        // in each cardinal direction, joined by a square perimeter.
+        for (int radius = 3; radius <= 3; radius++) {
+            if (hasRedstoneCrossAndSquare(world, center, radius)
+                    && hasCornerTorches(world, center, radius)) {
                 return true;
             }
         }
-
         return false;
     }
 
     private boolean hasRedstoneCrossAndSquare(World world, BlockPos center, int radius) {
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                if (dx == 0 && dz == 0) continue;
+        // The four arms from the head.
+        for (int distance = 1; distance <= 3; distance++) {
+            if (!isRitualDust(world, center.add(distance, 0, 0))
+                    || !isRitualDust(world, center.add(-distance, 0, 0))
+                    || !isRitualDust(world, center.add(0, 0, distance))
+                    || !isRitualDust(world, center.add(0, 0, -distance))) {
+                return false;
+            }
+        }
 
-                boolean outerEdge = Math.abs(dx) == radius || Math.abs(dz) == radius;
-                boolean radialLine = dx == 0 || dz == 0;
-                if (!outerEdge && !radialLine) continue;
-
-                BlockPos dustPos = center.add(dx, 0, dz);
-                if (!world.isBlockLoaded(dustPos)
-                        || world.getBlockState(dustPos).getBlock() != Blocks.REDSTONE_WIRE
-                        || !hasRitualSupport(world, dustPos)) {
-                    return false;
-                }
+        // Connect the arm endpoints into a square.
+        for (int offset = -radius; offset <= radius; offset++) {
+            if (!isRitualDust(world, center.add(offset, 0, radius))
+                    || !isRitualDust(world, center.add(offset, 0, -radius))
+                    || !isRitualDust(world, center.add(radius, 0, offset))
+                    || !isRitualDust(world, center.add(-radius, 0, offset))) {
+                return false;
             }
         }
         return true;
     }
 
-    private boolean hasCornerTorches(World world, BlockPos center, int offset) {
-        for (int dx : new int[] {-offset, offset}) {
-            for (int dz : new int[] {-offset, offset}) {
-                BlockPos torchPos = center.add(dx, 0, dz);
-                if (!world.isBlockLoaded(torchPos)
-                        || world.getBlockState(torchPos).getBlock() != Blocks.REDSTONE_TORCH
-                        || !hasRitualSupport(world, torchPos)) {
-                    return false;
+    private boolean isRitualDust(World world, BlockPos pos) {
+        return world.isBlockLoaded(pos)
+                && world.getBlockState(pos).getBlock() == Blocks.REDSTONE_WIRE
+                && hasRitualSupport(world, pos);
+    }
+
+    private boolean hasCornerTorches(World world, BlockPos center, int radius) {
+        // A torch may be placed diagonally just outside a square corner.
+        // Accept either the corner-adjacent cell or one block farther out.
+        for (int sx : new int[] {-1, 1}) {
+            for (int sz : new int[] {-1, 1}) {
+                boolean found = false;
+                for (int ox = radius; ox <= radius + 1; ox++) {
+                    for (int oz = radius; oz <= radius + 1; oz++) {
+                        BlockPos torchPos = center.add(sx * ox, 0, sz * oz);
+                        if (world.isBlockLoaded(torchPos)
+                                && isRedstoneTorch(world, torchPos)
+                                && hasRitualSupport(world, torchPos)) {
+                            found = true;
+                        }
+                    }
                 }
+                if (!found) return false;
             }
         }
         return true;
+    }
+
+    private boolean isRedstoneTorch(World world, BlockPos pos) {
+        net.minecraft.block.Block block = world.getBlockState(pos).getBlock();
+        return block == Blocks.REDSTONE_TORCH || block == Blocks.UNLIT_REDSTONE_TORCH;
     }
 
     private boolean isPlayerHead(World world, BlockPos pos) {
