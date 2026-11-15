@@ -5,7 +5,7 @@ import net.minecraft.entity.monster.EntityMob;
 import net.minecraft.world.World;
 
 /**
- * Тихая сущность, которая появляется после использования Тотема бессмертия.
+ * Тихая сущность, которая появляется после завершения ритуала.
  * Не атакует, не преследует игрока и не имеет собственного ИИ.
  */
 public class EntityMaskedGirl extends EntityMob {
