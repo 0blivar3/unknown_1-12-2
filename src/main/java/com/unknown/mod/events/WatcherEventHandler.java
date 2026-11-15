@@ -1,5 +1,6 @@
 package com.unknown.mod.events;
 
+import com.unknown.mod.ModConfig;
 import com.unknown.mod.entity.EntityWatcher;
 import com.unknown.mod.events.MysteryProgression;
 
@@ -35,16 +36,12 @@ public class WatcherEventHandler {
     private static final String LOOK_TICKS_TAG = "unknown_watcher_look_ticks";
     private static final String LOOK_DESPAWN_DELAY_TAG = "unknown_watcher_look_delay";
 
-    // Обычно силуэт виден лишь несколько секунд — достаточно, чтобы его можно было заметить на записи.
-    private static final int MIN_LIFETIME_TICKS = 20 * 8;
-    private static final int MAX_LIFETIME_TICKS = 20 * 24;
-
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
 
         EntityPlayer player = event.player;
-        if (player.world.isRemote) return;
+        if (player.world.isRemote || !ModConfig.watcherEnabled) return;
 
         int mysteryLevel = MysteryProgression.getLevel(player.world);
         if (mysteryLevel <= 0) return; // Первый игровой день полностью безопасен.
@@ -126,10 +123,11 @@ public class WatcherEventHandler {
                 player.getUniqueID().toString()
         );
         watcher.getEntityData().setInteger(AGE_TAG, 0);
+        int minLifetime = ModConfig.watcherMinLifetimeSeconds * 20;
+        int maxLifetime = ModConfig.watcherMaxLifetimeSeconds * 20;
         watcher.getEntityData().setInteger(
                 LIFETIME_TAG,
-                MIN_LIFETIME_TICKS
-                        + random.nextInt(MAX_LIFETIME_TICKS - MIN_LIFETIME_TICKS + 1)
+                minLifetime + random.nextInt(maxLifetime - minLifetime + 1)
         );
         watcher.getEntityData().setInteger(
                 MOVE_DELAY_TAG,
@@ -154,6 +152,10 @@ public class WatcherEventHandler {
         if (entity.world.isRemote) return;
         if (!(entity instanceof EntityWatcher)) return;
         if (!entity.getEntityData().getBoolean(WATCHER_TAG)) return;
+        if (!ModConfig.watcherEnabled) {
+            entity.setDead();
+            return;
+        }
 
         int age = entity.getEntityData().getInteger(AGE_TAG) + 1;
         entity.getEntityData().setInteger(AGE_TAG, age);
