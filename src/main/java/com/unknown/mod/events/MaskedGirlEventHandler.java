@@ -629,11 +629,9 @@ public class MaskedGirlEventHandler {
         attacker.getEntityData().setBoolean(GIRL_TAG, true);
         attacker.getEntityData().setString(OWNER_TAG, player.getUniqueID().toString());
         attacker.getEntityData().setInteger(AGE_TAG, 0);
-        attacker.getEntityData().setInteger(LIFETIME_TAG, 100);
+        attacker.getEntityData().setInteger(LIFETIME_TAG, 400);
         if (!world.spawnEntity(attacker)) return false;
-        target.attackEntityFrom(net.minecraft.util.DamageSource.causeMobDamage(attacker),
-                target.getMaxHealth() + 20.0F);
-        attacker.setDead();
+        attacker.setAttackTarget(target);
         return true;
     }
 
