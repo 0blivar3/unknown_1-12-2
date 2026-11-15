@@ -355,10 +355,12 @@ public class WatcherEventHandler {
             int x = (int) Math.floor(player.posX + Math.cos(angle) * distance);
             int z = (int) Math.floor(player.posZ + Math.sin(angle) * distance);
 
-            BlockPos pos = player.world.getTopSolidOrLiquidBlock(
-                    new BlockPos(x, player.posY, z)
-            );
+            BlockPos column = new BlockPos(x, player.posY, z);
+            // Не вызываем поиск поверхности в незагруженном чанке:
+            // это может принудительно подгрузить/сгенерировать далёкий чанк.
+            if (!player.world.isBlockLoaded(column)) continue;
 
+            BlockPos pos = player.world.getTopSolidOrLiquidBlock(column);
             if (!player.world.isBlockLoaded(pos)) continue;
             if (Math.abs(pos.getY() - player.posY) > 8.0D) continue;
             if (!isSafeStandingPosition(player, pos)) continue;
@@ -386,10 +388,12 @@ public class WatcherEventHandler {
             int x = (int) Math.floor(player.posX + Math.cos(angle) * distance);
             int z = (int) Math.floor(player.posZ + Math.sin(angle) * distance);
 
-            BlockPos pos = player.world.getTopSolidOrLiquidBlock(
-                    new BlockPos(x, player.posY, z)
-            );
+            BlockPos column = new BlockPos(x, player.posY, z);
+            // Не вызываем поиск поверхности в незагруженном чанке:
+            // это может принудительно подгрузить/сгенерировать далёкий чанк.
+            if (!player.world.isBlockLoaded(column)) continue;
 
+            BlockPos pos = player.world.getTopSolidOrLiquidBlock(column);
             if (!player.world.isBlockLoaded(pos)) continue;
 
             double heightDifference = pos.getY() - player.posY;
@@ -480,10 +484,12 @@ public class WatcherEventHandler {
             double x = player.posX + Math.cos(angle) * distance;
             double z = player.posZ + Math.sin(angle) * distance;
 
-            BlockPos pos = player.world.getTopSolidOrLiquidBlock(
-                    new BlockPos(x, player.posY, z)
-            );
+            BlockPos column = new BlockPos(x, player.posY, z);
+            // Не вызываем поиск поверхности в незагруженном чанке:
+            // это может принудительно подгрузить/сгенерировать далёкий чанк.
+            if (!player.world.isBlockLoaded(column)) continue;
 
+            BlockPos pos = player.world.getTopSolidOrLiquidBlock(column);
             if (!player.world.isBlockLoaded(pos)) continue;
             if (pos.getY() <= 1 || pos.getY() >= player.world.getHeight() - 2) continue;
 
@@ -557,10 +563,10 @@ public class WatcherEventHandler {
             int x = (int) Math.floor(player.posX + Math.cos(angle) * distance);
             int z = (int) Math.floor(player.posZ + Math.sin(angle) * distance);
 
-            BlockPos surface = player.world.getTopSolidOrLiquidBlock(
-                    new BlockPos(x, player.posY, z)
-            );
+            BlockPos column = new BlockPos(x, player.posY, z);
+            if (!player.world.isBlockLoaded(column)) continue;
 
+            BlockPos surface = player.world.getTopSolidOrLiquidBlock(column);
             if (!player.world.isBlockLoaded(surface)) continue;
 
             int minY = Math.max(2, surface.getY() - 14);
@@ -664,6 +670,7 @@ public class WatcherEventHandler {
         };
 
         for (BlockPos side : sides) {
+            if (!player.world.isBlockLoaded(side)) continue;
             IBlockState state = player.world.getBlockState(side);
             if (state.getMaterial().blocksMovement()) {
                 return true;
