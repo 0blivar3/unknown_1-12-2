@@ -1,6 +1,7 @@
 
 package com.unknown.mod;
 
+import com.unknown.mod.ModConfig;
 import com.unknown.mod.entity.EntityWatcher;
 import com.unknown.mod.events.WatcherEventHandler;
 import com.unknown.mod.proxy.CommonProxy;
@@ -44,6 +45,7 @@ public class UnknownMod {
     public void preInit(FMLPreInitializationEvent event) {
 
         logger = event.getModLog();
+        ModConfig.load(event.getSuggestedConfigurationFile());
 
         EntityRegistry.registerModEntity(
                 new ResourceLocation(MODID, "watcher"),
