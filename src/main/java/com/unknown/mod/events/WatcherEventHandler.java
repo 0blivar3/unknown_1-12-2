@@ -152,7 +152,7 @@ public class WatcherEventHandler {
         if (entity.world.isRemote) return;
         if (!(entity instanceof EntityWatcher)) return;
         if (!entity.getEntityData().getBoolean(WATCHER_TAG)) return;
-        if (!ModConfig.watcherEnabled) {
+        if (!ModConfig.mysteryEnabled || !ModConfig.watcherEnabled) {
             entity.setDead();
             return;
         }
