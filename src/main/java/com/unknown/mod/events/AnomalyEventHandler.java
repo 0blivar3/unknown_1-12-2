@@ -379,12 +379,18 @@ public class AnomalyEventHandler {
         for (EntityAnimal animal : world.getEntitiesWithinAABB(
                 EntityAnimal.class, player.getEntityBoundingBox().grow(22.0D, 7.0D, 22.0D))) {
 
-            if (animal.isDead || animal instanceof EntityTameable || animal instanceof EntityHorse) {
+            if (animal.isDead || animal instanceof EntityTameable || animal instanceof EntityHorse
+                    || animal.hasCustomName() || animal.getLeashed()) {
                 continue;
             }
 
             double distanceSq = animal.getDistanceSq(player);
             if (distanceSq < 64.0D || distanceSq > 484.0D) continue;
+
+            BlockPos animalPos = animal.getPosition();
+            if (hasNearbyPlayerStructure(world, animalPos, 3)
+                    || isNearFence(world, animalPos, 3)) continue;
+
             candidates.add(animal);
         }
 
@@ -504,8 +510,12 @@ public class AnomalyEventHandler {
         double z = player.posZ + Math.sin(angle) * distance;
         BlockPos column = new BlockPos(x, player.posY, z);
         if (!world.isBlockLoaded(column)) return;
-        BlockPos pos = world.getTopSolidOrLiquidBlock(column);
 
+        // В пещере звук должен находиться рядом с уровнем игрока,
+        // а не на поверхности над его головой.
+        BlockPos pos = underground
+                ? new BlockPos(x, player.posY + random.nextInt(7) - 3, z)
+                : world.getTopSolidOrLiquidBlock(column);
         if (!world.isBlockLoaded(pos)) return;
 
         if (underground) {
@@ -576,7 +586,10 @@ public class AnomalyEventHandler {
             double z = player.posZ + Math.sin(angle) * distance;
             BlockPos column = new BlockPos(x, player.posY, z);
             if (!world.isBlockLoaded(column)) continue;
-            BlockPos pos = world.getTopSolidOrLiquidBlock(column);
+
+            BlockPos pos = world.canSeeSky(player.getPosition())
+                    ? world.getTopSolidOrLiquidBlock(column)
+                    : new BlockPos(x, player.posY, z);
             if (!world.isBlockLoaded(pos)) continue;
 
             world.playSound(null, pos, SoundEvents.BLOCK_GRASS_STEP,
