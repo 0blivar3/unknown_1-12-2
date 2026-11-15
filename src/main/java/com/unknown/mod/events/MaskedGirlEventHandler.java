@@ -4,7 +4,6 @@ import com.unknown.mod.ModConfig;
 import com.unknown.mod.entity.EntityMaskedGirl;
 
 import net.minecraft.block.BlockStandingSign;
-import net.minecraft.block.BlockSkull;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.passive.EntityHorse;
@@ -14,6 +13,7 @@ import net.minecraft.init.Blocks;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntitySign;
+import net.minecraft.tileentity.TileEntitySkull;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -211,10 +211,14 @@ public class MaskedGirlEventHandler {
     }
 
     private boolean isPlayerHead(World world, BlockPos pos) {
-        if (!world.isBlockLoaded(pos)) return false;
+        if (!world.isBlockLoaded(pos)
+                || world.getBlockState(pos).getBlock() != Blocks.SKULL) {
+            return false;
+        }
 
-        return world.getBlockState(pos).getBlock() == Blocks.SKULL
-                && world.getBlockState(pos).getValue(BlockSkull.TYPE) == BlockSkull.EnumType.PLAYER;
+        TileEntity tile = world.getTileEntity(pos);
+        return tile instanceof TileEntitySkull
+                && ((TileEntitySkull) tile).getSkullType() == 3;
     }
 
     private boolean hasRitualSupport(World world, BlockPos pos) {
