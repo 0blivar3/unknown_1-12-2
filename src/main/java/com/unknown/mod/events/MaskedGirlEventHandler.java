@@ -350,7 +350,18 @@ public class MaskedGirlEventHandler {
         int count = Math.min(eligible.size(), 3 + random.nextInt(4));
         for (int i = 0; i < count; i++) {
             EntityAnimal animal = eligible.remove(random.nextInt(eligible.size()));
-            animal.getNavigator().tryMoveToEntityLiving(player, 0.72D);
+
+            if (random.nextInt(3) == 0) {
+                // Часть животных просто поворачивается к игроку и неподвижно наблюдает.
+                animal.getNavigator().clearPath();
+                double dx = player.posX - animal.posX;
+                double dz = player.posZ - animal.posZ;
+                float yaw = (float) (Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0F;
+                animal.rotationYaw = yaw;
+            } else {
+                // Остальные медленно начинают идти следом.
+                animal.getNavigator().tryMoveToEntityLiving(player, 0.72D);
+            }
         }
     }
 
