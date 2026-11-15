@@ -1,6 +1,7 @@
 package com.unknown.mod;
 
 import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.common.config.Property;
 
 import java.io.File;
 
@@ -100,12 +101,15 @@ public final class ModConfig {
                 "Множитель дистанции появления и перемещения Наблюдателя.");
 
         String watcher = "watcher";
-        watcherMinLifetimeSeconds = config.get(watcher, "minLifetimeSeconds", 15,
-                "Минимальное время существования Наблюдателя в секундах.", 1, 120).getInt(15);
-        watcherMaxLifetimeSeconds = config.get(watcher, "maxLifetimeSeconds", 90,
-                "Максимальное время существования Наблюдателя в секундах.", 1, 180).getInt(90);
+        Property minLifetime = config.get(watcher, "minLifetimeSeconds", 15,
+                "Минимальное время существования Наблюдателя в секундах.", 1, 120);
+        Property maxLifetime = config.get(watcher, "maxLifetimeSeconds", 90,
+                "Максимальное время существования Наблюдателя в секундах.", 1, 180);
+        watcherMinLifetimeSeconds = minLifetime.getInt(15);
+        watcherMaxLifetimeSeconds = maxLifetime.getInt(90);
         if (watcherMaxLifetimeSeconds < watcherMinLifetimeSeconds) {
             watcherMaxLifetimeSeconds = watcherMinLifetimeSeconds;
+            maxLifetime.set(watcherMaxLifetimeSeconds);
         }
 
         if (config.hasChanged()) {
