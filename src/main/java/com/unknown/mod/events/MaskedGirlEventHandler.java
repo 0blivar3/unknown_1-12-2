@@ -142,6 +142,7 @@ public class MaskedGirlEventHandler {
         int state = girl.getEntityData().getInteger(ATTACK_STATE_TAG);
         int cooldown = girl.getEntityData().getInteger(ATTACK_COOLDOWN_TAG);
         if (state == 0) {
+            girl.setAttackTarget(null);
             if (cooldown > 0) {
                 girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, cooldown - 1);
                 girl.faceEntity(owner, 4.0F, 4.0F);
@@ -154,6 +155,7 @@ public class MaskedGirlEventHandler {
             return;
         }
         if (state == 1) {
+            girl.setAttackTarget(null);
             girl.faceEntity(owner, 6.0F, 6.0F);
             int stare = girl.getEntityData().getInteger(STARE_TIMER_TAG) - 1;
             girl.getEntityData().setInteger(STARE_TIMER_TAG, stare);
@@ -162,16 +164,11 @@ public class MaskedGirlEventHandler {
         }
         int attackTime = girl.getEntityData().getInteger(ATTACK_TIMER_TAG) - 1;
         girl.getEntityData().setInteger(ATTACK_TIMER_TAG, attackTime);
+        girl.setAttackTarget(owner);
         girl.getNavigator().tryMoveToEntityLiving(owner, 1.15D);
         girl.faceEntity(owner, 30.0F, 30.0F);
-        int hitCooldown = girl.getEntityData().getInteger(HIT_COOLDOWN_TAG);
-        if (hitCooldown > 0) {
-            girl.getEntityData().setInteger(HIT_COOLDOWN_TAG, hitCooldown - 1);
-        } else if (girl.getDistance(owner) <= 2.4F) {
-            girl.attackEntityAsMob(owner);
-            girl.getEntityData().setInteger(HIT_COOLDOWN_TAG, 20);
-        }
         if (attackTime <= 0) {
+            girl.setAttackTarget(null);
             girl.getNavigator().clearPath();
             girl.getEntityData().setInteger(ATTACK_STATE_TAG, 0);
             girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, 1200 + girl.world.rand.nextInt(2401));
