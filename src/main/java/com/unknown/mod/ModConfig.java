@@ -37,8 +37,8 @@ public final class ModConfig {
     public static double watcherChanceMultiplier = 1.0D;
     public static double watcherDistanceMultiplier = 1.0D;
 
-    public static int watcherMinLifetimeSeconds = 8;
-    public static int watcherMaxLifetimeSeconds = 24;
+    public static int watcherMinLifetimeSeconds = 15;
+    public static int watcherMaxLifetimeSeconds = 90;
 
     private ModConfig() {
     }
@@ -101,9 +101,9 @@ public final class ModConfig {
 
         String watcher = "watcher";
         watcherMinLifetimeSeconds = config.get(watcher, "minLifetimeSeconds", 8,
-                "Минимальное время существования Наблюдателя в секундах.", 1, 120).getInt(8);
+                "Минимальное время существования Наблюдателя в секундах.", 1, 120).getInt(15);
         watcherMaxLifetimeSeconds = config.get(watcher, "maxLifetimeSeconds", 24,
-                "Максимальное время существования Наблюдателя в секундах.", 1, 180).getInt(24);
+                "Максимальное время существования Наблюдателя в секундах.", 1, 180).getInt(90);
         if (watcherMaxLifetimeSeconds < watcherMinLifetimeSeconds) {
             watcherMaxLifetimeSeconds = watcherMinLifetimeSeconds;
         }
