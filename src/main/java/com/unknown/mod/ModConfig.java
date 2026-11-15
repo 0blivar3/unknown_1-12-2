@@ -48,6 +48,10 @@ public final class ModConfig {
         sync();
     }
 
+    public static Configuration getConfig() {
+        return config;
+    }
+
     public static void sync() {
         if (config == null) return;
 
