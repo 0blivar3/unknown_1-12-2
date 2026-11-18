@@ -6,6 +6,7 @@ import com.unknown.mod.entity.EntityMaskedGirl;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.monster.EntitySkeleton;
 import net.minecraft.entity.monster.EntityZombie;
@@ -342,7 +343,7 @@ public class MaskedGirlAtmosphereHandler {
         return world.getCollisionBoxes(null, box).isEmpty();
     }
 
-    private void facePlayer(Entity entity, EntityPlayer player) {
+    private void facePlayer(EntityLivingBase entity, EntityPlayer player) {
         double dx = player.posX - entity.posX;
         double dz = player.posZ - entity.posZ;
         float yaw = (float) (Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0F;
