@@ -59,6 +59,8 @@ public class MaskedGirlEventHandler {
     private static final String STARE_TIMER_TAG = "unknown_masked_girl_stare_timer";
     private static final String ATTACK_COOLDOWN_TAG = "unknown_masked_girl_attack_cooldown";
     private static final String HIT_COOLDOWN_TAG = "unknown_masked_girl_hit_cooldown";
+    private static final String LOOK_REACTION_TAG = "unknown_masked_girl_look_reaction";
+    private static final String LOOK_REACTION_TIMER_TAG = "unknown_masked_girl_look_reaction_timer";
     private static final String[][] THREAT_MESSAGES = {
             {"I HEARD YOU", "BEFORE YOU", "ARRIVED", ""},
             {"THEY KNOW", "YOU ARE HERE", "", ""},
@@ -166,6 +168,36 @@ public class MaskedGirlEventHandler {
                 vanishWithSound(girl);
             }
             return;
+        }
+
+        // Stage III: being spotted can trigger either a delayed disappearance or a hunt.
+        // The outcome is rolled once per appearance, so looking at her cannot reroll it.
+        boolean playerSpottedHer = isPlayerLookingAt(owner, girl);
+        int lookReaction = girl.getEntityData().getInteger(LOOK_REACTION_TAG);
+        if (lookReaction == 1) {
+            int reactionTimer = girl.getEntityData().getInteger(LOOK_REACTION_TIMER_TAG) - 1;
+            girl.getEntityData().setInteger(LOOK_REACTION_TIMER_TAG, reactionTimer);
+            if (reactionTimer <= 0) {
+                vanishWithSound(girl);
+            }
+            return;
+        }
+        if (playerSpottedHer && lookReaction == 0) {
+            if (girl.world.rand.nextInt(100) < 45) {
+                // A short, unpredictable pause before she vanishes.
+                girl.getEntityData().setInteger(LOOK_REACTION_TAG, 1);
+                girl.getEntityData().setInteger(LOOK_REACTION_TIMER_TAG,
+                        5 + girl.world.rand.nextInt(16));
+                girl.setNoAI(true);
+                girl.setAttackTarget(null);
+                girl.getNavigator().clearPath();
+                return;
+            }
+
+            // She has noticed that the player has seen her. She immediately starts hunting.
+            girl.getEntityData().setInteger(LOOK_REACTION_TAG, 2);
+            girl.getEntityData().setInteger(ATTACK_STATE_TAG, 2);
+            girl.getEntityData().setInteger(ATTACK_TIMER_TAG, 300 + girl.world.rand.nextInt(201));
         }
 
         // Stage III: she roams between attacks, pauses to stare, then actively hunts.
