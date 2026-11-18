@@ -48,6 +48,7 @@ public class MaskedGirlEventHandler {
     private static final String OWNER_TAG = "unknown_masked_girl_owner";
     private static final String AGE_TAG = "unknown_masked_girl_age";
     private static final String LIFETIME_TAG = "unknown_masked_girl_lifetime";
+    private static final String EXPIRES_AT_TAG = "unknown_masked_girl_expires_at";
     private static final String LOOK_TICKS_TAG = "unknown_masked_girl_look_ticks";
     private static final String RITUAL_ACTIVATED_TAG = "unknown_masked_girl_ritual_activated";
     private static final String ATTACK_STATE_TAG = "unknown_masked_girl_attack_state";
@@ -118,13 +119,15 @@ public class MaskedGirlEventHandler {
         int age = girl.getEntityData().getInteger(AGE_TAG) + 1;
         girl.getEntityData().setInteger(AGE_TAG, age);
 
-        if (age >= girl.getEntityData().getInteger(LIFETIME_TAG)) {
+        long expiresAt = girl.getEntityData().getLong(EXPIRES_AT_TAG);
+        if ((expiresAt > 0L && girl.world.getTotalWorldTime() >= expiresAt)
+                || age >= girl.getEntityData().getInteger(LIFETIME_TAG)) {
             vanishWithSound(girl);
             return;
         }
 
         EntityPlayer owner = findOwner(girl);
-        if (owner == null) {
+        if (owner == null || owner.getEntityData().getInteger(HAUNTING_TICKS) <= 0) {
             girl.setDead();
             return;
         }
@@ -437,7 +440,9 @@ public class MaskedGirlEventHandler {
         girl.getEntityData().setBoolean(GIRL_TAG, true);
         girl.getEntityData().setString(OWNER_TAG, player.getUniqueID().toString());
         girl.getEntityData().setInteger(AGE_TAG, 0);
-        girl.getEntityData().setInteger(LIFETIME_TAG, stage >= 3 ? 5000 : 1200 + world.rand.nextInt(1801));
+        int lifetime = stage >= 3 ? 5000 : 1200 + world.rand.nextInt(1801);
+        girl.getEntityData().setInteger(LIFETIME_TAG, lifetime);
+        girl.getEntityData().setLong(EXPIRES_AT_TAG, world.getTotalWorldTime() + lifetime);
         girl.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
         girl.getEntityData().setInteger(ATTACK_STATE_TAG, 0);
         girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, 600 + world.rand.nextInt(1201));
@@ -651,10 +656,12 @@ public class MaskedGirlEventHandler {
                     if (!world.isBlockLoaded(pos)) continue;
                     net.minecraft.block.Block block = world.getBlockState(pos).getBlock();
                     if (block instanceof net.minecraft.block.BlockTrapDoor
-                            && !world.getBlockState(pos).getValue(net.minecraft.block.BlockTrapDoor.OPEN)) {
+                            && !world.getBlockState(pos).getValue(net.minecraft.block.BlockTrapDoor.OPEN)
+                            && !isNearPlayerStructure(world, pos, 3)) {
                         candidates.add(pos);
                     } else if (block instanceof net.minecraft.block.BlockFenceGate
-                            && !world.getBlockState(pos).getValue(net.minecraft.block.BlockFenceGate.OPEN)) {
+                            && !world.getBlockState(pos).getValue(net.minecraft.block.BlockFenceGate.OPEN)
+                            && !isNearPlayerStructure(world, pos, 3)) {
                         candidates.add(pos);
                     }
                 }
@@ -788,8 +795,10 @@ public class MaskedGirlEventHandler {
         for (net.minecraft.entity.EntityLiving target : candidates) {
             if (target.isDead || target instanceof EntityMaskedGirl
                     || target instanceof net.minecraft.entity.passive.EntityAnimal
+                    || target instanceof EntityTameable
                     || target instanceof net.minecraft.entity.passive.EntityVillager
                     || target instanceof net.minecraft.entity.monster.EntityIronGolem
+                    || target.hasCustomName() || target.getLeashed()
                     || target.getDistanceSq(player) < 36.0D) continue;
             eligible.add(target);
         }
