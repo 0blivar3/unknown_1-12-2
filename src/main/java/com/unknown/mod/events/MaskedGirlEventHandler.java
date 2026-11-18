@@ -99,8 +99,8 @@ public class MaskedGirlEventHandler {
         int elapsed = HAUNTING_DURATION - remaining;
         int stage = Math.min(3, elapsed / STAGE_LENGTH + 1);
         boolean eventHappened = performHauntingEvent(player, stage);
-        int nextDelay = 3600 + random.nextInt(3601);
-        if (!eventHappened) nextDelay = 800 + random.nextInt(801);
+        int nextDelay = 1200 + random.nextInt(1801);
+        if (!eventHappened) nextDelay = 400 + random.nextInt(801);
         player.getEntityData().setInteger(NEXT_EVENT_TICKS, nextDelay);
     }
 
@@ -135,12 +135,9 @@ public class MaskedGirlEventHandler {
             return;
         }
         if (stage < 3) {
+            // Before the final stage, being noticed is enough to make her vanish.
             if (isPlayerLookingAt(owner, girl)) {
-                int lookTicks = girl.getEntityData().getInteger(LOOK_TICKS_TAG) + 1;
-                girl.getEntityData().setInteger(LOOK_TICKS_TAG, lookTicks);
-                if (lookTicks >= 15) girl.setDead();
-            } else {
-                girl.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
+                girl.setDead();
             }
             return;
         }
@@ -376,31 +373,30 @@ public class MaskedGirlEventHandler {
         int choice = random.nextInt(100);
 
         if (stage == 1) {
-            if (choice < 22 && !hasActiveGirl(player)) return spawnGirl(player, stage);
-            if (choice < 40) { playDistantFootsteps(player); return true; }
-            if (choice < 58) return makeAnimalsWatchSameDirection(player);
-            if (choice < 73) return playWoodKnock(player);
-            if (choice < 85) return extinguishNearbyTorch(player);
+            if (choice < 40 && !hasActiveGirl(player)) return spawnGirl(player, stage);
+            if (choice < 54) { playDistantFootsteps(player); return true; }
+            if (choice < 68) return makeAnimalsWatchSameDirection(player);
+            if (choice < 80) return playWoodKnock(player);
+            if (choice < 90) return extinguishNearbyTorch(player);
             return placeThreatSign(player);
         }
 
         if (stage == 2) {
-            if (choice < 18 && !hasActiveGirl(player)) return spawnGirl(player, stage);
-            if (choice < 34) return openNearbyDoor(player);
-            if (choice < 49) return killNearbyMob(player);
-            if (choice < 61) { playDistantFootsteps(player); return true; }
-            if (choice < 72) return openNearbyPassage(player);
-            if (choice < 82) return playChestSound(player);
-            if (choice < 91) return makeAnimalsWatchSameDirection(player);
-            return placeThreatSign(player);
+            if (choice < 35 && !hasActiveGirl(player)) return spawnGirl(player, stage);
+            if (choice < 48) return openNearbyDoor(player);
+            if (choice < 61) return killNearbyMob(player);
+            if (choice < 71) { playDistantFootsteps(player); return true; }
+            if (choice < 81) return openNearbyPassage(player);
+            if (choice < 90) return playChestSound(player);
+            return makeAnimalsWatchSameDirection(player) || placeThreatSign(player);
         }
 
-        if (choice < 20 && !hasActiveGirl(player)) return spawnGirl(player, stage);
-        if (choice < 36) return openNearbyDoor(player);
-        if (choice < 52) return killNearbyMob(player);
-        if (choice < 65) { playDistantFootsteps(player); return true; }
-        if (choice < 76) return extinguishNearbyTorch(player);
-        if (choice < 87) return playWoodKnock(player);
+        if (choice < 22 && !hasActiveGirl(player)) return spawnGirl(player, stage);
+        if (choice < 38) return openNearbyDoor(player);
+        if (choice < 54) return killNearbyMob(player);
+        if (choice < 66) { playDistantFootsteps(player); return true; }
+        if (choice < 78) return extinguishNearbyTorch(player);
+        if (choice < 89) return playWoodKnock(player);
         return placeThreatSign(player);
     }
 
@@ -420,8 +416,9 @@ public class MaskedGirlEventHandler {
 
     private boolean spawnGirl(EntityPlayer player, int stage) {
         World world = player.world;
-        BlockPos pos = findSafePosition(player, stage >= 2 ? 22.0D : 30.0D,
-                stage >= 2 ? 45.0D : 55.0D, true);
+        double minDistance = stage >= 3 ? 22.0D : (stage == 2 ? 8.0D : 12.0D);
+        double maxDistance = stage >= 3 ? 45.0D : (stage == 2 ? 24.0D : 30.0D);
+        BlockPos pos = findSafePosition(player, minDistance, maxDistance, stage < 3);
         if (pos == null) return false;
 
         EntityMaskedGirl girl = new EntityMaskedGirl(world);
@@ -445,7 +442,13 @@ public class MaskedGirlEventHandler {
         girl.getEntityData().setInteger(ATTACK_STATE_TAG, 0);
         girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, 600 + world.rand.nextInt(1201));
 
-        return world.spawnEntity(girl);
+        boolean spawned = world.spawnEntity(girl);
+        if (spawned && stage < 3 && girl.getDistance(player) <= 12.0D
+                && world.rand.nextInt(3) != 0) {
+            world.playSound(null, girl.getPosition(), SoundEvents.ENTITY_ENDERMEN_STARE,
+                    SoundCategory.HOSTILE, 0.85F, 0.65F + world.rand.nextFloat() * 0.15F);
+        }
+        return spawned;
     }
 
     private EntityPlayer findOwner(Entity entity) {
@@ -503,7 +506,8 @@ public class MaskedGirlEventHandler {
                 Vec3d eyes = player.getPositionEyes(1.0F);
                 Vec3d target = new Vec3d(pos.getX() + 0.5D, pos.getY() + 0.9D, pos.getZ() + 0.5D);
                 Vec3d direction = target.subtract(eyes).normalize();
-                if (player.getLook(1.0F).dotProduct(direction) > 0.72D) continue;
+                // Keep her in the rear hemisphere so a normal camera cannot catch the spawn.
+                if (player.getLook(1.0F).dotProduct(direction) > -0.15D) continue;
             }
 
             return pos;
