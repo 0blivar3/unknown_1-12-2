@@ -459,12 +459,14 @@ public class MaskedGirlEventHandler {
         int lifetime = stage >= 3 ? 5000 : 1200 + world.rand.nextInt(1801);
         girl.getEntityData().setInteger(LIFETIME_TAG, lifetime);
         girl.getEntityData().setLong(EXPIRES_AT_TAG, world.getTotalWorldTime() + lifetime);
-        player.getEntityData().setLong(ACTIVE_UNTIL_TAG, world.getTotalWorldTime() + lifetime);
         girl.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
         girl.getEntityData().setInteger(ATTACK_STATE_TAG, 0);
         girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, 600 + world.rand.nextInt(1201));
 
         boolean spawned = world.spawnEntity(girl);
+        if (spawned) {
+            player.getEntityData().setLong(ACTIVE_UNTIL_TAG, world.getTotalWorldTime() + lifetime);
+        }
         if (spawned && stage < 3 && girl.getDistance(player) <= 12.0D
                 && world.rand.nextInt(3) != 0) {
             world.playSound(null, girl.getPosition(), SoundEvents.ENTITY_ENDERMEN_STARE,
