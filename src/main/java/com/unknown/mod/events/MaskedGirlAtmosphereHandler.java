@@ -67,8 +67,10 @@ public class MaskedGirlAtmosphereHandler {
         if (event.phase != TickEvent.Phase.END || event.player.world.isRemote) return;
 
         EntityPlayer player = event.player;
-        if (!ModConfig.maskedGirlEnabled || player.getEntityData().getInteger(HAUNTING_TICKS) <= 0) return;
+        MaskedGirlWorldData worldData = MaskedGirlWorldData.get(player.world);
+        if (!ModConfig.maskedGirlEnabled || worldData == null || !worldData.isActive()) return;
 
+        player.getEntityData().setInteger(HAUNTING_TICKS, worldData.getRemainingTicks());
         updateHabits(player);
 
         if (!player.getEntityData().hasKey(COOLDOWN_TAG)) {
@@ -215,8 +217,10 @@ public class MaskedGirlAtmosphereHandler {
         if (hasActiveGirl(player)) return false;
 
         int scanHabit = player.getEntityData().getInteger(SCAN_TAG);
-        int remaining = player.getEntityData().getInteger(HAUNTING_TICKS);
-        boolean finalStage = remaining <= 24000;
+        MaskedGirlWorldData worldData = MaskedGirlWorldData.get(world);
+        int remaining = worldData == null ? player.getEntityData().getInteger(HAUNTING_TICKS)
+                : worldData.getRemainingTicks();
+        boolean finalStage = worldData != null ? worldData.getStage() >= 3 : remaining <= 24000;
         double min = scanHabit > 500 ? 27.0D : (finalStage ? 22.0D : (afterSleep ? 10.0D : 13.0D));
         double max = scanHabit > 500 ? 42.0D : (finalStage ? 45.0D : (afterSleep ? 20.0D : 31.0D));
 
@@ -540,7 +544,8 @@ public class MaskedGirlAtmosphereHandler {
         String ownerId = entity.getEntityData().getString(OBSERVER_OWNER_TAG);
         for (EntityPlayer player : entity.world.playerEntities) {
             if (ownerId.equals(player.getUniqueID().toString())) {
-                if (player.getEntityData().getInteger(HAUNTING_TICKS) <= 0) {
+                MaskedGirlWorldData worldData = MaskedGirlWorldData.get(entity.world);
+                if (worldData == null || !worldData.isActive()) {
                     entity.setDead();
                     return;
                 }
