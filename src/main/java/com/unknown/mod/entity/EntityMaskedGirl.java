@@ -1,6 +1,7 @@
 package com.unknown.mod.entity;
 
 import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.util.DamageSource;
 import net.minecraft.entity.ai.EntityAIAttackMelee;
 import net.minecraft.entity.ai.EntityAIWander;
 import net.minecraft.entity.ai.EntityAILookIdle;
@@ -19,6 +20,7 @@ public class EntityMaskedGirl extends EntityMob {
         setNoAI(false);
         setSilent(true);
         enablePersistence();
+        setEntityInvulnerable(true);
     }
 
     @Override
@@ -34,6 +36,12 @@ public class EntityMaskedGirl extends EntityMob {
         getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(20.0D);
         getEntityAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).setBaseValue(0.38D);
         getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).setBaseValue(4.0D);
+    }
+
+    @Override
+    public boolean attackEntityFrom(DamageSource source, float amount) {
+        // The entity cannot be damaged by any source.
+        return false;
     }
 
     @Override
