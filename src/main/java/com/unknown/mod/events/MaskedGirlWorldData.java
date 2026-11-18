@@ -76,8 +76,11 @@ public class MaskedGirlWorldData extends WorldSavedData {
         if (remainingTicks <= 0) {
             remainingTicks = 0;
             taken = true;
+            markDirty();
+        } else if (remainingTicks % 20 == 0) {
+            // Сохраняем прогресс раз в секунду, а не помечаем данные грязными каждый тик.
+            markDirty();
         }
-        markDirty();
     }
 
     @Override
