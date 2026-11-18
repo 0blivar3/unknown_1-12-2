@@ -57,10 +57,6 @@ public class MaskedGirlEventHandler {
     private static final String STARE_TIMER_TAG = "unknown_masked_girl_stare_timer";
     private static final String ATTACK_COOLDOWN_TAG = "unknown_masked_girl_attack_cooldown";
     private static final String HIT_COOLDOWN_TAG = "unknown_masked_girl_hit_cooldown";
-    private static final int STAGE_LENGTH = 24000;
-
-    private static final int HAUNTING_DURATION = 3 * 24000;
-
     private static final String[][] THREAT_MESSAGES = {
             {"I HEARD YOU", "BEFORE YOU", "ARRIVED", ""},
             {"THEY KNOW", "YOU ARE HERE", "", ""},
