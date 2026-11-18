@@ -86,10 +86,12 @@ public class MaskedGirlEventHandler {
 
         EntityPlayer player = event.player;
 
-        int remaining = player.getEntityData().getInteger(HAUNTING_TICKS);
-        if (remaining <= 0 || !ModConfig.maskedGirlEnabled) return;
+        MaskedGirlWorldData worldData = MaskedGirlWorldData.get(player.world);
+        if (worldData == null || !worldData.isActive()) return;
 
-        player.getEntityData().setInteger(HAUNTING_TICKS, remaining - 1);
+        int remaining = worldData.getRemainingTicks();
+        player.getEntityData().setInteger(HAUNTING_TICKS, remaining);
+        if (!ModConfig.maskedGirlEnabled) return;
 
         int cooldown = player.getEntityData().getInteger(NEXT_EVENT_TICKS);
         if (cooldown > 0) {
@@ -98,12 +100,20 @@ public class MaskedGirlEventHandler {
         }
 
         Random random = player.world.rand;
-        int elapsed = HAUNTING_DURATION - remaining;
-        int stage = Math.min(3, elapsed / STAGE_LENGTH + 1);
+        int stage = worldData.getStage();
         boolean eventHappened = performHauntingEvent(player, stage);
         int nextDelay = 1200 + random.nextInt(1801);
         if (!eventHappened) nextDelay = 400 + random.nextInt(801);
         player.getEntityData().setInteger(NEXT_EVENT_TICKS, nextDelay);
+    }
+
+    @SubscribeEvent
+    public void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || event.world.isRemote
+                || event.world.provider.getDimension() != 0) return;
+
+        MaskedGirlWorldData worldData = MaskedGirlWorldData.get(event.world);
+        if (worldData != null) worldData.tick();
     }
 
     @SubscribeEvent
@@ -128,12 +138,12 @@ public class MaskedGirlEventHandler {
         }
 
         EntityPlayer owner = findOwner(girl);
-        if (owner == null || owner.getEntityData().getInteger(HAUNTING_TICKS) <= 0) {
+        MaskedGirlWorldData worldData = MaskedGirlWorldData.get(girl.world);
+        if (owner == null || worldData == null || !worldData.isActive()) {
             girl.setDead();
             return;
         }
-        int elapsed = HAUNTING_DURATION - owner.getEntityData().getInteger(HAUNTING_TICKS);
-        int stage = Math.min(3, elapsed / STAGE_LENGTH + 1);
+        int stage = worldData.getStage();
         if (stage < 3 && girl.getDistance(owner) < 9.0F) {
             vanishWithSound(girl);
             return;
@@ -197,6 +207,9 @@ public class MaskedGirlEventHandler {
         if (player == null) return;
 
         World world = event.getWorld();
+        MaskedGirlWorldData worldData = MaskedGirlWorldData.get(world);
+        if (worldData != null && worldData.isActive()) return;
+
         BlockPos placed = event.getPos();
         net.minecraft.block.Block placedBlock = world.getBlockState(placed).getBlock();
         if (placedBlock != Blocks.REDSTONE_WIRE
@@ -372,7 +385,10 @@ public class MaskedGirlEventHandler {
     }
 
     private void beginHaunting(EntityPlayer player) {
-        player.getEntityData().setInteger(HAUNTING_TICKS, HAUNTING_DURATION);
+        MaskedGirlWorldData worldData = MaskedGirlWorldData.get(player.world);
+        if (worldData == null) return;
+        worldData.begin();
+        player.getEntityData().setInteger(HAUNTING_TICKS, worldData.getRemainingTicks());
         player.getEntityData().setInteger(NEXT_EVENT_TICKS, 1800 + player.world.rand.nextInt(1801));
 
         WorldInfo info = player.world.getWorldInfo();
