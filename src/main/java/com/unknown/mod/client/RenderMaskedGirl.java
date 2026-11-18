@@ -14,7 +14,6 @@ public class RenderMaskedGirl extends RenderLiving<EntityMaskedGirl> {
 
     public RenderMaskedGirl(RenderManager manager) {
         super(manager, new ModelPlayer(0.0F, true), 0.0F);
-        addLayer(new LayerMaskedFace((ModelPlayer) this.mainModel));
     }
 
     @Override
