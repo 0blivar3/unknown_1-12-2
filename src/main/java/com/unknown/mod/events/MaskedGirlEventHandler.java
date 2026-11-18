@@ -23,10 +23,12 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
+import net.minecraft.util.DamageSource;
 import net.minecraft.world.storage.WorldInfo;
 
 import net.minecraftforge.event.world.BlockEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
@@ -110,6 +112,20 @@ public class MaskedGirlEventHandler {
 
         MaskedGirlWorldData worldData = MaskedGirlWorldData.get(event.world);
         if (worldData != null) worldData.tick();
+    }
+
+    @SubscribeEvent
+    public void onPlayerDeath(LivingDeathEvent event) {
+        if (event.getEntityLiving().world.isRemote || !ModConfig.deleteWorldOnDeath
+                || !(event.getEntityLiving() instanceof EntityPlayer)) {
+            return;
+        }
+
+        DamageSource source = event.getSource();
+        Entity attacker = source.getTrueSource();
+        if (!(attacker instanceof EntityMaskedGirl)) return;
+
+        WorldDeletionHandler.scheduleDeletion(event.getEntityLiving().world);
     }
 
     @SubscribeEvent
