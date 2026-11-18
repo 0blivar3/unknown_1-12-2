@@ -119,7 +119,7 @@ public class MaskedGirlEventHandler {
         girl.getEntityData().setInteger(AGE_TAG, age);
 
         if (age >= girl.getEntityData().getInteger(LIFETIME_TAG)) {
-            girl.setDead();
+            vanishWithSound(girl);
             return;
         }
 
@@ -131,13 +131,13 @@ public class MaskedGirlEventHandler {
         int elapsed = HAUNTING_DURATION - owner.getEntityData().getInteger(HAUNTING_TICKS);
         int stage = Math.min(3, elapsed / STAGE_LENGTH + 1);
         if (stage < 3 && girl.getDistance(owner) < 9.0F) {
-            girl.setDead();
+            vanishWithSound(girl);
             return;
         }
         if (stage < 3) {
             // Before the final stage, being noticed is enough to make her vanish.
             if (isPlayerLookingAt(owner, girl)) {
-                girl.setDead();
+                vanishWithSound(girl);
             }
             return;
         }
@@ -449,6 +449,14 @@ public class MaskedGirlEventHandler {
                     SoundCategory.HOSTILE, 0.85F, 0.65F + world.rand.nextFloat() * 0.15F);
         }
         return spawned;
+    }
+
+    private void vanishWithSound(EntityMaskedGirl girl) {
+        if (!girl.world.isRemote) {
+            girl.world.playSound(null, girl.getPosition(), SoundEvents.ENTITY_ENDERMEN_STARE,
+                    SoundCategory.HOSTILE, 0.9F, 0.5F + girl.world.rand.nextFloat() * 0.12F);
+        }
+        girl.setDead();
     }
 
     private EntityPlayer findOwner(Entity entity) {
