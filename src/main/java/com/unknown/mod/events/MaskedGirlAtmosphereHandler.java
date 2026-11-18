@@ -60,6 +60,7 @@ public class MaskedGirlAtmosphereHandler {
     private static final String OBSERVER_LIFE_TAG = "unknown_mg_observer_life";
     private static final String OBSERVER_EXPIRES_TAG = "unknown_mg_observer_expires_at";
     private static final String GIRL_EXPIRES_TAG = "unknown_masked_girl_expires_at";
+    private static final String GIRL_ACTIVE_UNTIL_TAG = "unknown_masked_girl_active_until";
 
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
@@ -237,6 +238,7 @@ public class MaskedGirlAtmosphereHandler {
         girl.getEntityData().setInteger("unknown_masked_girl_age", 0);
         girl.getEntityData().setInteger("unknown_masked_girl_lifetime", girlLifetime);
         girl.getEntityData().setLong(GIRL_EXPIRES_TAG, world.getTotalWorldTime() + girlLifetime);
+        player.getEntityData().setLong(GIRL_ACTIVE_UNTIL_TAG, world.getTotalWorldTime() + girlLifetime);
         girl.getEntityData().setInteger("unknown_masked_girl_look_ticks", 0);
         girl.getEntityData().setInteger("unknown_masked_girl_attack_state", 0);
         girl.getEntityData().setInteger("unknown_masked_girl_attack_cooldown", 1200);
@@ -255,6 +257,10 @@ public class MaskedGirlAtmosphereHandler {
     }
 
     private boolean hasActiveGirl(EntityPlayer player) {
+        long activeUntil = player.getEntityData().getLong(GIRL_ACTIVE_UNTIL_TAG);
+        if (activeUntil > player.world.getTotalWorldTime()) return true;
+        if (activeUntil != 0L) player.getEntityData().setLong(GIRL_ACTIVE_UNTIL_TAG, 0L);
+
         String owner = player.getUniqueID().toString();
         for (Entity entity : player.world.loadedEntityList) {
             if (entity instanceof EntityMaskedGirl && entity.getEntityData().getBoolean(GIRL_TAG)
