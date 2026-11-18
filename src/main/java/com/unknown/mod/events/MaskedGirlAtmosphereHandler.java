@@ -238,13 +238,14 @@ public class MaskedGirlAtmosphereHandler {
         girl.getEntityData().setInteger("unknown_masked_girl_age", 0);
         girl.getEntityData().setInteger("unknown_masked_girl_lifetime", girlLifetime);
         girl.getEntityData().setLong(GIRL_EXPIRES_TAG, world.getTotalWorldTime() + girlLifetime);
-        player.getEntityData().setLong(GIRL_ACTIVE_UNTIL_TAG, world.getTotalWorldTime() + girlLifetime);
         girl.getEntityData().setInteger("unknown_masked_girl_look_ticks", 0);
         girl.getEntityData().setInteger("unknown_masked_girl_attack_state", 0);
         girl.getEntityData().setInteger("unknown_masked_girl_attack_cooldown", 1200);
 
         boolean spawned = world.spawnEntity(girl);
         if (spawned) {
+            player.getEntityData().setLong(GIRL_ACTIVE_UNTIL_TAG,
+                    world.getTotalWorldTime() + girlLifetime);
             player.getEntityData().setInteger(LAST_X_TAG, pos.getX());
             player.getEntityData().setInteger(LAST_Y_TAG, pos.getY());
             player.getEntityData().setInteger(LAST_Z_TAG, pos.getZ());
