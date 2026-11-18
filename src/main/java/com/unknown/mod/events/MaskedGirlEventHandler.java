@@ -197,6 +197,11 @@ public class MaskedGirlEventHandler {
 
         World world = event.getWorld();
         BlockPos placed = event.getPos();
+        net.minecraft.block.Block placedBlock = world.getBlockState(placed).getBlock();
+        if (placedBlock != Blocks.REDSTONE_WIRE
+                && placedBlock != Blocks.REDSTONE_TORCH
+                && placedBlock != Blocks.UNLIT_REDSTONE_TORCH
+                && placedBlock != Blocks.SKULL) return;
 
         for (int dx = -9; dx <= 9; dx++) {
             for (int dz = -9; dz <= 9; dz++) {
@@ -227,6 +232,12 @@ public class MaskedGirlEventHandler {
 
         World world = event.getWorld();
         BlockPos broken = event.getPos();
+        net.minecraft.block.Block brokenBlock = world.getBlockState(broken).getBlock();
+        // Большинство сломанных блоков не может быть частью ритуала.
+        // Не запускаем полный поиск головы при обычном копании.
+        if (brokenBlock != Blocks.REDSTONE_WIRE
+                && brokenBlock != Blocks.REDSTONE_TORCH
+                && brokenBlock != Blocks.UNLIT_REDSTONE_TORCH) return;
 
         for (int dx = -9; dx <= 9; dx++) {
             for (int dz = -9; dz <= 9; dz++) {
