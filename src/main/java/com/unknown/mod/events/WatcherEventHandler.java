@@ -139,8 +139,6 @@ public class WatcherEventHandler {
         watcher.getEntityData().setInteger(LIFETIME_TAG, lifetime);
         watcher.getEntityData().setLong(EXPIRES_AT_TAG,
                 player.world.getTotalWorldTime() + lifetime);
-        player.getEntityData().setLong(ACTIVE_UNTIL_TAG,
-                player.world.getTotalWorldTime() + lifetime);
         watcher.getEntityData().setInteger(
                 MOVE_DELAY_TAG,
                 100 + random.nextInt(121)
@@ -152,6 +150,8 @@ public class WatcherEventHandler {
         );
 
         if (player.world.spawnEntity(watcher)) {
+            player.getEntityData().setLong(ACTIVE_UNTIL_TAG,
+                    player.world.getTotalWorldTime() + lifetime);
             player.getEntityData().setInteger(ENCOUNTERS_TAG,
                     player.getEntityData().getInteger(ENCOUNTERS_TAG) + 1);
         }
