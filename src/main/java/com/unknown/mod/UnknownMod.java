@@ -7,6 +7,7 @@ import com.unknown.mod.events.AnomalyEventHandler;
 import com.unknown.mod.events.MaskedGirlEventHandler;
 import com.unknown.mod.events.MaskedGirlAtmosphereHandler;
 import com.unknown.mod.events.WatcherEventHandler;
+import com.unknown.mod.events.WorldDeletionHandler;
 import com.unknown.mod.proxy.CommonProxy;
 
 import net.minecraft.util.ResourceLocation;
@@ -17,6 +18,7 @@ import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.SidedProxy;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStoppedEvent;
 import net.minecraftforge.fml.common.registry.EntityRegistry;
 
 import org.apache.logging.log4j.Logger;
@@ -79,6 +81,11 @@ public class UnknownMod {
         MinecraftForge.EVENT_BUS.register(new MaskedGirlAtmosphereHandler());
 
         logger.info("UNKNOWN is awakening...");
+    }
+
+    @EventHandler
+    public void serverStopped(FMLServerStoppedEvent event) {
+        WorldDeletionHandler.deletePendingWorld();
     }
 
     @EventHandler
