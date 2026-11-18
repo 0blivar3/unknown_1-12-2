@@ -29,6 +29,8 @@ public class WatcherEventHandler {
     private static final String OWNER_TAG = "unknown_watcher_owner";
     private static final String AGE_TAG = "unknown_watcher_age";
     private static final String LIFETIME_TAG = "unknown_watcher_lifetime";
+    private static final String EXPIRES_AT_TAG = "unknown_watcher_expires_at";
+    private static final String ACTIVE_UNTIL_TAG = "unknown_watcher_active_until";
     private static final String COOLDOWN_TAG = "unknown_watcher_cooldown";
     private static final String HIDDEN_TICKS_TAG = "unknown_hidden_ticks";
     private static final String MOVE_DELAY_TAG = "unknown_move_delay";
@@ -79,6 +81,10 @@ public class WatcherEventHandler {
     }
 
     private boolean hasActiveWatcher(EntityPlayer player) {
+        long activeUntil = player.getEntityData().getLong(ACTIVE_UNTIL_TAG);
+        if (activeUntil > player.world.getTotalWorldTime()) return true;
+        if (activeUntil != 0L) player.getEntityData().setLong(ACTIVE_UNTIL_TAG, 0L);
+
         List<Entity> entities = player.world.loadedEntityList;
         String ownerId = player.getUniqueID().toString();
 
@@ -129,10 +135,12 @@ public class WatcherEventHandler {
         watcher.getEntityData().setInteger(AGE_TAG, 0);
         int minLifetime = ModConfig.watcherMinLifetimeSeconds * 20;
         int maxLifetime = ModConfig.watcherMaxLifetimeSeconds * 20;
-        watcher.getEntityData().setInteger(
-                LIFETIME_TAG,
-                minLifetime + random.nextInt(maxLifetime - minLifetime + 1)
-        );
+        int lifetime = minLifetime + random.nextInt(maxLifetime - minLifetime + 1);
+        watcher.getEntityData().setInteger(LIFETIME_TAG, lifetime);
+        watcher.getEntityData().setLong(EXPIRES_AT_TAG,
+                player.world.getTotalWorldTime() + lifetime);
+        player.getEntityData().setLong(ACTIVE_UNTIL_TAG,
+                player.world.getTotalWorldTime() + lifetime);
         watcher.getEntityData().setInteger(
                 MOVE_DELAY_TAG,
                 100 + random.nextInt(121)
@@ -165,7 +173,9 @@ public class WatcherEventHandler {
         entity.getEntityData().setInteger(AGE_TAG, age);
 
         int lifetime = entity.getEntityData().getInteger(LIFETIME_TAG);
-        if (lifetime <= 0 || age >= lifetime) {
+        long expiresAt = entity.getEntityData().getLong(EXPIRES_AT_TAG);
+        if (lifetime <= 0 || age >= lifetime
+                || (expiresAt > 0L && entity.world.getTotalWorldTime() >= expiresAt)) {
             entity.setDead();
             return;
         }
