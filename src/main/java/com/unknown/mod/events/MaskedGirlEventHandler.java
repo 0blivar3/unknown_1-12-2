@@ -106,7 +106,7 @@ public class MaskedGirlEventHandler {
     @SubscribeEvent
     public void onWorldTick(TickEvent.WorldTickEvent event) {
         if (event.phase != TickEvent.Phase.END || event.world.isRemote
-                || event.world.provider.getDimension() != 0) return;
+                || event.world.provider.getDimension() != 0 || !ModConfig.maskedGirlEnabled) return;
 
         MaskedGirlWorldData worldData = MaskedGirlWorldData.get(event.world);
         if (worldData != null) worldData.tick();
