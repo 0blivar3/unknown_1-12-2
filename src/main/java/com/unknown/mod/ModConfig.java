@@ -17,6 +17,7 @@ public final class ModConfig {
 
     public static boolean watcherEnabled = true;
     public static boolean maskedGirlEnabled = true;
+    public static boolean deleteWorldOnDeath = false;
 
     public static boolean signAnomaly = true;
     public static boolean torchAnomaly = true;
@@ -70,6 +71,9 @@ public final class ModConfig {
                 "Разрешает появление и существование Наблюдателя.").getBoolean(true);
         maskedGirlEnabled = config.get(characters, "maskedGirlEnabled", true,
                 "Разрешает активацию ритуала и появление девушки в маске.").getBoolean(true);
+        deleteWorldOnDeath = config.get(characters, "deleteWorldOnDeath", false,
+                "ВНИМАНИЕ: безвозвратно удаляет текущий одиночный мир и завершает игру, если игрока убивает Девушка в маске. Резервную копию нужно сделать заранее.")
+                .getBoolean(false);
 
         String anomalies = "anomalies";
         signAnomaly = getBoolean(anomalies, "signs", true, "Появление загадочных табличек.");
