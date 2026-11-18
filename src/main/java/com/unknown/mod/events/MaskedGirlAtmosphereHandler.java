@@ -516,13 +516,18 @@ public class MaskedGirlAtmosphereHandler {
             return;
         }
 
+        if (!ModConfig.maskedGirlEnabled) {
+            entity.setDead();
+            return;
+        }
+
         String ownerId = entity.getEntityData().getString(OBSERVER_OWNER_TAG);
         for (EntityPlayer player : entity.world.playerEntities) {
-            if (player.getEntityData().getInteger(HAUNTING_TICKS) <= 0) {
-                entity.setDead();
-                return;
-            }
             if (ownerId.equals(player.getUniqueID().toString())) {
+                if (player.getEntityData().getInteger(HAUNTING_TICKS) <= 0) {
+                    entity.setDead();
+                    return;
+                }
                 facePlayer(entity, player);
                 return;
             }
