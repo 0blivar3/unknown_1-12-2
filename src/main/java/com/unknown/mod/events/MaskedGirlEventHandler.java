@@ -48,6 +48,7 @@ public class MaskedGirlEventHandler {
     private static final String OWNER_TAG = "unknown_masked_girl_owner";
     private static final String AGE_TAG = "unknown_masked_girl_age";
     private static final String LIFETIME_TAG = "unknown_masked_girl_lifetime";
+    private static final String ACTIVE_UNTIL_TAG = "unknown_masked_girl_active_until";
     private static final String EXPIRES_AT_TAG = "unknown_masked_girl_expires_at";
     private static final String LOOK_TICKS_TAG = "unknown_masked_girl_look_ticks";
     private static final String RITUAL_ACTIVATED_TAG = "unknown_masked_girl_ritual_activated";
@@ -415,6 +416,10 @@ public class MaskedGirlEventHandler {
     }
 
     private boolean hasActiveGirl(EntityPlayer player) {
+        long activeUntil = player.getEntityData().getLong(ACTIVE_UNTIL_TAG);
+        if (activeUntil > player.world.getTotalWorldTime()) return true;
+        if (activeUntil != 0L) player.getEntityData().setLong(ACTIVE_UNTIL_TAG, 0L);
+
         String ownerId = player.getUniqueID().toString();
 
         for (Entity entity : player.world.loadedEntityList) {
@@ -454,6 +459,7 @@ public class MaskedGirlEventHandler {
         int lifetime = stage >= 3 ? 5000 : 1200 + world.rand.nextInt(1801);
         girl.getEntityData().setInteger(LIFETIME_TAG, lifetime);
         girl.getEntityData().setLong(EXPIRES_AT_TAG, world.getTotalWorldTime() + lifetime);
+        player.getEntityData().setLong(ACTIVE_UNTIL_TAG, world.getTotalWorldTime() + lifetime);
         girl.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
         girl.getEntityData().setInteger(ATTACK_STATE_TAG, 0);
         girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, 600 + world.rand.nextInt(1201));
