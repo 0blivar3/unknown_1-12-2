@@ -140,11 +140,15 @@ public class MaskedGirlEventHandler {
             return;
         }
         int stage = worldData.getStage();
-        if (stage < 3 && girl.getDistance(owner) < 9.0F) {
-            vanishWithSound(girl);
-            return;
-        }
         if (stage < 3) {
+            // While observing the player, keep her head and body oriented toward them.
+            girl.faceEntity(owner, 10.0F, 10.0F);
+
+            if (girl.getDistance(owner) < 9.0F) {
+                vanishWithSound(girl);
+                return;
+            }
+
             // Before the final stage, being noticed is enough to make her vanish.
             if (isPlayerLookingAt(owner, girl)) {
                 vanishWithSound(girl);
