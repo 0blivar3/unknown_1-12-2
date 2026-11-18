@@ -5,6 +5,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.storage.MapStorage;
 import net.minecraft.world.storage.WorldSavedData;
+import net.minecraft.entity.player.EntityPlayer;
 
 /**
  * Сохраняем состояние ритуала в данных мира, а не только в NBT игрока.
@@ -40,6 +41,17 @@ public class MaskedGirlWorldData extends WorldSavedData {
             data = new MaskedGirlWorldData();
             storage.setData(DATA_NAME, data);
         }
+
+        // Миграция уже начатого ритуала из старых сохранений игрока.
+        if (!data.isActive()) {
+            for (EntityPlayer player : world.getMinecraftServer().getPlayerList().getPlayers()) {
+                int legacyRemaining = player.getEntityData().getInteger("unknown_masked_girl_haunting");
+                if (legacyRemaining > 0) {
+                    data.restoreProgress(legacyRemaining);
+                    break;
+                }
+            }
+        }
         return data;
     }
 
@@ -67,6 +79,14 @@ public class MaskedGirlWorldData extends WorldSavedData {
         started = true;
         taken = false;
         remainingTicks = HAUNTING_DURATION;
+        markDirty();
+    }
+
+    public void restoreProgress(int remaining) {
+        if (started || remaining <= 0) return;
+        started = true;
+        remainingTicks = Math.min(HAUNTING_DURATION, remaining);
+        taken = remainingTicks <= 0;
         markDirty();
     }
 
