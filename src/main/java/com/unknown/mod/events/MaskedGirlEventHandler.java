@@ -416,7 +416,7 @@ public class MaskedGirlEventHandler {
 
     private boolean spawnGirl(EntityPlayer player, int stage) {
         World world = player.world;
-        double minDistance = stage >= 3 ? 22.0D : (stage == 2 ? 8.0D : 12.0D);
+        double minDistance = stage >= 3 ? 22.0D : (stage == 2 ? 10.0D : 12.0D);
         double maxDistance = stage >= 3 ? 45.0D : (stage == 2 ? 24.0D : 30.0D);
         BlockPos pos = findSafePosition(player, minDistance, maxDistance, stage < 3);
         if (pos == null) return false;
@@ -469,7 +469,7 @@ public class MaskedGirlEventHandler {
         Vec3d target = entity.getPositionVector().addVector(0.0D, entity.height * 0.55D, 0.0D);
         Vec3d direction = target.subtract(eyes).normalize();
 
-        return player.getLook(1.0F).dotProduct(direction) > 0.94D;
+        return player.getLook(1.0F).dotProduct(direction) > 0.90D;
     }
 
     private BlockPos findSafePosition(EntityPlayer player, double minDistance,
