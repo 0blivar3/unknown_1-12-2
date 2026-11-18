@@ -10,7 +10,7 @@ import net.minecraft.util.ResourceLocation;
 public class RenderMaskedGirl extends RenderLiving<EntityMaskedGirl> {
 
     private static final ResourceLocation TEXTURE =
-            new ResourceLocation("minecraft", "textures/entity/alex.png");
+            new ResourceLocation("minecraft", "textures/entity/masked_girl.png");
 
     public RenderMaskedGirl(RenderManager manager) {
         super(manager, new ModelPlayer(0.0F, true), 0.0F);
