@@ -178,7 +178,10 @@ public class MaskedGirlEventHandler {
             int reactionTimer = girl.getEntityData().getInteger(LOOK_REACTION_TIMER_TAG) - 1;
             girl.getEntityData().setInteger(LOOK_REACTION_TIMER_TAG, reactionTimer);
             if (reactionTimer <= 0) {
-                vanishWithSound(girl);
+                // She slips behind an obstruction and reappears somewhere else nearby.
+                if (!relocateBehindObstacle(girl, owner)) {
+                    vanishWithSound(girl);
+                }
             }
             return;
         }
@@ -591,6 +594,54 @@ public class MaskedGirlEventHandler {
                     SoundCategory.HOSTILE, 0.9F, 0.5F + girl.world.rand.nextFloat() * 0.12F);
         }
         girl.setDead();
+    }
+
+    /**
+     * Moves her to a safe, unseen position with a solid obstruction between her
+     * and the player. This is a server-side relocation, not a visible teleport.
+     */
+    private boolean relocateBehindObstacle(EntityMaskedGirl girl, EntityPlayer player) {
+        World world = girl.world;
+        Vec3d eyes = player.getPositionEyes(1.0F);
+
+        for (int attempt = 0; attempt < 24; attempt++) {
+            BlockPos candidate = findSafePosition(player, 10.0D, 34.0D, true);
+            if (candidate == null) return false;
+
+            Vec3d target = new Vec3d(candidate.getX() + 0.5D,
+                    candidate.getY() + 0.9D, candidate.getZ() + 0.5D);
+            // A ray hit means terrain/building blocks the direct view.
+            if (world.rayTraceBlocks(eyes, target) == null) continue;
+
+            BlockPos oldPos = girl.getPosition();
+            world.playSound(null, oldPos, SoundEvents.ENTITY_ENDERMEN_TELEPORT,
+                    SoundCategory.HOSTILE, 0.45F, 0.65F + world.rand.nextFloat() * 0.25F);
+
+            girl.setPosition(candidate.getX() + 0.5D, candidate.getY(),
+                    candidate.getZ() + 0.5D);
+            faceEntityTowardPlayer(girl, player);
+            girl.getNavigator().clearPath();
+            girl.setAttackTarget(null);
+            girl.setNoAI(true);
+            girl.getEntityData().setInteger(LOOK_REACTION_TAG, 0);
+            girl.getEntityData().setInteger(LOOK_REACTION_TIMER_TAG, 0);
+            girl.getEntityData().setInteger(ATTACK_STATE_TAG, 0);
+            girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG,
+                    100 + world.rand.nextInt(301));
+            girl.getEntityData().setInteger(AGE_TAG, 0);
+            return true;
+        }
+        return false;
+    }
+
+    private void faceEntityTowardPlayer(EntityMaskedGirl girl, EntityPlayer player) {
+        double dx = player.posX - girl.posX;
+        double dz = player.posZ - girl.posZ;
+        float yaw = (float) (Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0F;
+        girl.rotationYaw = yaw;
+        girl.prevRotationYaw = yaw;
+        girl.setRotationYawHead(yaw);
+        girl.setRenderYawOffset(yaw);
     }
 
     private EntityPlayer findOwner(Entity entity) {
