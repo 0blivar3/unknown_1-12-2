@@ -433,31 +433,37 @@ public class MaskedGirlAtmosphereHandler {
     private void playNearbyBlockBreak(EntityPlayer player) {
         World world = player.world;
         BlockPos base = player.getPosition();
-        List<BlockPos> candidates = new ArrayList<>();
-        for (int x = -8; x <= 8; x++) {
-            for (int y = -3; y <= 3; y++) {
-                for (int z = -8; z <= 8; z++) {
+        BlockPos selected = null;
+        int eligible = 0;
+
+        // Reservoir sampling: выбираем случайный подходящий блок без большого списка
+        // и не сканируем область дальше необходимого радиуса.
+        for (int x = -6; x <= 6; x++) {
+            for (int y = -2; y <= 3; y++) {
+                for (int z = -6; z <= 6; z++) {
                     BlockPos pos = base.add(x, y, z);
-                    if (!world.isBlockLoaded(pos)) continue;
+                    if (!world.isBlockLoaded(pos) || pos.distanceSq(base) < 9.0D) continue;
+
                     IBlockState state = world.getBlockState(pos);
                     Block block = state.getBlock();
                     if (state.getMaterial().isAir() || state.getMaterial().isLiquid()
                             || block == Blocks.BEDROCK || block == Blocks.BARRIER
                             || block == Blocks.COMMAND_BLOCK || block == Blocks.CHAIN_COMMAND_BLOCK
-                            || block == Blocks.REPEATING_COMMAND_BLOCK) continue;
-                    if (block.getBlockHardness(state, world, pos) < 0.0F) continue;
-                    if (block.hasTileEntity(state)) continue;
-                    if (pos.distanceSq(player.getPosition()) < 9.0D) continue;
-                    candidates.add(pos);
+                            || block == Blocks.REPEATING_COMMAND_BLOCK
+                            || block.getBlockHardness(state, world, pos) < 0.0F
+                            || block.hasTileEntity(state)) continue;
+
+                    eligible++;
+                    if (world.rand.nextInt(eligible) == 0) selected = pos;
                 }
             }
         }
-        if (candidates.isEmpty()) return;
 
-        BlockPos pos = candidates.get(world.rand.nextInt(candidates.size()));
-        IBlockState state = world.getBlockState(pos);
-        net.minecraft.block.SoundType sound = state.getBlock().getSoundType(state, world, pos, player);
-        world.playSound(null, pos, sound.getBreakSound(), SoundCategory.BLOCKS,
+        if (selected == null) return;
+
+        IBlockState state = world.getBlockState(selected);
+        net.minecraft.block.SoundType sound = state.getBlock().getSoundType(state, world, selected, player);
+        world.playSound(null, selected, sound.getBreakSound(), SoundCategory.BLOCKS,
                 (sound.getVolume() + 1.0F) * 0.5F,
                 sound.getPitch() * (0.8F + world.rand.nextFloat() * 0.4F));
     }
@@ -482,6 +488,9 @@ public class MaskedGirlAtmosphereHandler {
             if (!world.isBlockLoaded(column)) continue;
             BlockPos pos = world.getTopSolidOrLiquidBlock(column);
             if (!isSafeSpawn(player, pos, 18.0D, 42.0D)) continue;
+            // Зомби и скелеты не должны появляться под прямым дневным небом:
+            // иначе ванильная механика поджига уничтожит их почти сразу.
+            if (world.isDaytime() && world.canSeeSky(pos)) continue;
 
             net.minecraft.entity.monster.EntityMob observer;
             if (world.rand.nextBoolean()) observer = new EntityZombie(world);
