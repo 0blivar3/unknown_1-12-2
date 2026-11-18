@@ -67,6 +67,10 @@ public class MaskedGirlAtmosphereHandler {
 
         updateHabits(player);
 
+        if (!player.getEntityData().hasKey(COOLDOWN_TAG)) {
+            player.getEntityData().setInteger(COOLDOWN_TAG, 1200 + player.world.rand.nextInt(1201));
+        }
+
         boolean sleeping = player.isPlayerSleeping();
         boolean wasSleeping = player.getEntityData().getBoolean(SLEEP_TAG);
         player.getEntityData().setBoolean(SLEEP_TAG, sleeping);
@@ -314,7 +318,9 @@ public class MaskedGirlAtmosphereHandler {
         for (int x = -3; x <= 3; x++) {
             for (int y = -1; y <= 5; y++) {
                 for (int z = -3; z <= 3; z++) {
-                    Block check = world.getBlockState(pos.add(x, y, z)).getBlock();
+                    BlockPos checkPos = pos.add(x, y, z);
+                    if (!world.isBlockLoaded(checkPos)) continue;
+                    Block check = world.getBlockState(checkPos).getBlock();
                     if (check == Blocks.LOG || check == Blocks.LOG2
                             || check == Blocks.LEAVES || check == Blocks.LEAVES2) return true;
                 }
