@@ -453,7 +453,7 @@ public class MaskedGirlAtmosphereHandler {
 
                     IBlockState state = world.getBlockState(pos);
                     Block block = state.getBlock();
-                    if (state.getMaterial().isAir() || state.getMaterial().isLiquid()
+                    if (block.isAir(state, world, pos) || state.getMaterial().isLiquid()
                             || block == Blocks.BEDROCK || block == Blocks.BARRIER
                             || block == Blocks.COMMAND_BLOCK || block == Blocks.CHAIN_COMMAND_BLOCK
                             || block == Blocks.REPEATING_COMMAND_BLOCK
@@ -544,7 +544,9 @@ public class MaskedGirlAtmosphereHandler {
                     entity.setDead();
                     return;
                 }
-                facePlayer(entity, player);
+                if (entity instanceof EntityLivingBase) {
+                    facePlayer((EntityLivingBase) entity, player);
+                }
                 return;
             }
         }
