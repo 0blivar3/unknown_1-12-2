@@ -355,8 +355,8 @@ public class MaskedGirlAtmosphereHandler {
         float yaw = (float) (Math.atan2(dz, dx) * 180.0D / Math.PI) - 90.0F;
         entity.rotationYaw = yaw;
         entity.prevRotationYaw = yaw;
-        entity.rotationYawHead = yaw;
-        entity.renderYawOffset = yaw;
+        entity.setRotationYawHead(yaw);
+        entity.setRenderYawOffset(yaw);
     }
 
     private void playBreathBehindPlayer(EntityPlayer player) {
