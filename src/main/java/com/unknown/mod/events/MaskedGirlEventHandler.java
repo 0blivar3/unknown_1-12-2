@@ -427,12 +427,13 @@ public class MaskedGirlEventHandler {
             return makeAnimalsWatchSameDirection(player) || placeThreatSign(player);
         }
 
-        if (choice < 22 && !hasActiveGirl(player)) return spawnGirl(player, stage);
-        if (choice < 38) return openNearbyDoor(player);
-        if (choice < 54) return killNearbyMob(player);
-        if (choice < 66) { playDistantFootsteps(player); return true; }
-        if (choice < 78) return extinguishNearbyTorch(player);
-        if (choice < 89) return playWoodKnock(player);
+        if (choice < 20 && !hasActiveGirl(player)) return spawnGirl(player, stage);
+        if (choice < 32) return openNearbyDoor(player);
+        if (choice < 43) return killNearbyMob(player);
+        if (choice < 56) { playDistantFootsteps(player); return true; }
+        if (choice < 68) return extinguishNearbyTorch(player);
+        if (choice < 79) return playWoodKnock(player);
+        if (choice < 94) { playStageThreeAmbientSound(player); return true; }
         return placeThreatSign(player);
     }
 
@@ -496,6 +497,29 @@ public class MaskedGirlEventHandler {
                     SoundCategory.HOSTILE, 0.85F, 0.65F + world.rand.nextFloat() * 0.15F);
         }
         return spawned;
+    }
+
+    /** Additional spatial horror sounds used more often after the takeover. */
+    private void playStageThreeAmbientSound(EntityPlayer player) {
+        World world = player.world;
+        double angle = world.rand.nextDouble() * Math.PI * 2.0D;
+        double distance = 6.0D + world.rand.nextDouble() * 15.0D;
+        BlockPos pos = new BlockPos(player.posX + Math.cos(angle) * distance,
+                player.posY + world.rand.nextInt(5) - 2,
+                player.posZ + Math.sin(angle) * distance);
+        net.minecraft.util.SoundEvent sound;
+        switch (world.rand.nextInt(7)) {
+            case 0: sound = SoundEvents.ENTITY_GHAST_SCREAM; break;
+            case 1: sound = SoundEvents.ENTITY_ENDERMEN_SCREAM; break;
+            case 2: sound = SoundEvents.ENTITY_WITCH_AMBIENT; break;
+            case 3: sound = SoundEvents.ENTITY_ZOMBIE_AMBIENT; break;
+            case 4: sound = SoundEvents.BLOCK_IRON_DOOR_CLOSE; break;
+            case 5: sound = SoundEvents.AMBIENT_CAVE; break;
+            default: sound = SoundEvents.ENTITY_ENDERMEN_STARE; break;
+        }
+        world.playSound(null, pos, sound, SoundCategory.HOSTILE,
+                0.4F + world.rand.nextFloat() * 0.35F,
+                0.45F + world.rand.nextFloat() * 0.8F);
     }
 
     /** A distorted record-11 cue marks every stage-III appearance. */
