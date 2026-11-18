@@ -5,6 +5,7 @@ import com.unknown.mod.entity.EntityMaskedGirl;
 import com.unknown.mod.entity.EntityWatcher;
 import com.unknown.mod.events.AnomalyEventHandler;
 import com.unknown.mod.events.MaskedGirlEventHandler;
+import com.unknown.mod.events.MaskedGirlAtmosphereHandler;
 import com.unknown.mod.events.WatcherEventHandler;
 import com.unknown.mod.proxy.CommonProxy;
 
@@ -75,6 +76,7 @@ public class UnknownMod {
         MinecraftForge.EVENT_BUS.register(new AnomalyEventHandler());
         MinecraftForge.EVENT_BUS.register(new WatcherEventHandler());
         MinecraftForge.EVENT_BUS.register(new MaskedGirlEventHandler());
+        MinecraftForge.EVENT_BUS.register(new MaskedGirlAtmosphereHandler());
 
         logger.info("UNKNOWN is awakening...");
     }
