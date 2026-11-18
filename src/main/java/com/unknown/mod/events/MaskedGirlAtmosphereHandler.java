@@ -15,6 +15,7 @@ import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumHand;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
@@ -211,8 +212,10 @@ public class MaskedGirlAtmosphereHandler {
         if (hasActiveGirl(player)) return false;
 
         int scanHabit = player.getEntityData().getInteger(SCAN_TAG);
-        double min = scanHabit > 500 ? 27.0D : (afterSleep ? 10.0D : 13.0D);
-        double max = scanHabit > 500 ? 42.0D : (afterSleep ? 20.0D : 31.0D);
+        int remaining = player.getEntityData().getInteger(HAUNTING_TICKS);
+        boolean finalStage = remaining <= 24000;
+        double min = scanHabit > 500 ? 27.0D : (finalStage ? 22.0D : (afterSleep ? 10.0D : 13.0D));
+        double max = scanHabit > 500 ? 42.0D : (finalStage ? 45.0D : (afterSleep ? 20.0D : 31.0D));
 
         BlockPos pos = findRememberedPosition(player, min, max);
         if (pos == null) pos = findWindowPosition(player, min, max);
@@ -222,6 +225,9 @@ public class MaskedGirlAtmosphereHandler {
 
         EntityMaskedGirl girl = new EntityMaskedGirl(world);
         girl.setPosition(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
+        if (remaining <= 48000) {
+            girl.setHeldItem(EnumHand.MAIN_HAND, new ItemStack(Items.IRON_SWORD));
+        }
         facePlayer(girl, player);
         girl.getEntityData().setBoolean(GIRL_TAG, true);
         girl.getEntityData().setString(OWNER_TAG, player.getUniqueID().toString());
