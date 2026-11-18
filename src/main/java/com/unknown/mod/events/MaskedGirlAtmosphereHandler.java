@@ -207,6 +207,8 @@ public class MaskedGirlAtmosphereHandler {
             playDoorCreak(player);
         } else if (choice < 91) {
             playCaveWhisper(player);
+        } else if (choice < 96) {
+            playDreadSound(player);
         } else {
             if (!placeStrangeItem(player)) playFalseFootsteps(player);
         }
@@ -232,9 +234,10 @@ public class MaskedGirlAtmosphereHandler {
 
         EntityMaskedGirl girl = new EntityMaskedGirl(world);
         girl.setPosition(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
-        if (remaining <= 48000) {
+        if (finalStage) {
             girl.setHeldItem(EnumHand.MAIN_HAND, new ItemStack(Items.IRON_SWORD));
         }
+        girl.setNoAI(!finalStage);
         facePlayer(girl, player);
         girl.getEntityData().setBoolean(GIRL_TAG, true);
         girl.getEntityData().setString(OWNER_TAG, player.getUniqueID().toString());
@@ -253,7 +256,11 @@ public class MaskedGirlAtmosphereHandler {
             player.getEntityData().setInteger(LAST_X_TAG, pos.getX());
             player.getEntityData().setInteger(LAST_Y_TAG, pos.getY());
             player.getEntityData().setInteger(LAST_Z_TAG, pos.getZ());
-            if (afterSleep || girl.getDistance(player) < 16.0D) {
+            if (finalStage) {
+                float recordPitch = 0.55F + world.rand.nextFloat() * 0.9F;
+                world.playSound(null, pos, SoundEvents.RECORD_11,
+                        SoundCategory.RECORDS, 0.9F, recordPitch);
+            } else if (afterSleep || girl.getDistance(player) < 16.0D) {
                 world.playSound(null, pos, SoundEvents.ENTITY_ENDERMEN_STARE,
                         SoundCategory.HOSTILE, 0.55F, 0.62F + world.rand.nextFloat() * 0.18F);
             }
@@ -378,6 +385,28 @@ public class MaskedGirlAtmosphereHandler {
         entity.prevRotationYaw = yaw;
         entity.setRotationYawHead(yaw);
         entity.setRenderYawOffset(yaw);
+    }
+
+    /** A small pool of vanilla horror cues with randomized pitch and distance. */
+    private void playDreadSound(EntityPlayer player) {
+        World world = player.world;
+        double angle = world.rand.nextDouble() * Math.PI * 2.0D;
+        double distance = 7.0D + world.rand.nextDouble() * 12.0D;
+        BlockPos pos = new BlockPos(player.posX + Math.cos(angle) * distance,
+                player.posY + world.rand.nextInt(5) - 2,
+                player.posZ + Math.sin(angle) * distance);
+        SoundEvent sound;
+        switch (world.rand.nextInt(6)) {
+            case 0: sound = SoundEvents.ENTITY_GHAST_SCREAM; break;
+            case 1: sound = SoundEvents.ENTITY_ENDERMEN_SCREAM; break;
+            case 2: sound = SoundEvents.ENTITY_WITCH_AMBIENT; break;
+            case 3: sound = SoundEvents.ENTITY_ZOMBIE_AMBIENT; break;
+            case 4: sound = SoundEvents.BLOCK_IRON_DOOR_CLOSE; break;
+            default: sound = SoundEvents.AMBIENT_CAVE; break;
+        }
+        world.playSound(null, pos, sound, SoundCategory.HOSTILE,
+                0.35F + world.rand.nextFloat() * 0.3F,
+                0.45F + world.rand.nextFloat() * 0.75F);
     }
 
     private void playBreathBehindPlayer(EntityPlayer player) {
