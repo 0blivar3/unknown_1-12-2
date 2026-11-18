@@ -58,6 +58,8 @@ public class MaskedGirlAtmosphereHandler {
     private static final String OBSERVER_OWNER_TAG = "unknown_mg_observer_owner";
     private static final String OBSERVER_AGE_TAG = "unknown_mg_observer_age";
     private static final String OBSERVER_LIFE_TAG = "unknown_mg_observer_life";
+    private static final String OBSERVER_EXPIRES_TAG = "unknown_mg_observer_expires_at";
+    private static final String GIRL_EXPIRES_TAG = "unknown_masked_girl_expires_at";
 
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
@@ -231,8 +233,10 @@ public class MaskedGirlAtmosphereHandler {
         facePlayer(girl, player);
         girl.getEntityData().setBoolean(GIRL_TAG, true);
         girl.getEntityData().setString(OWNER_TAG, player.getUniqueID().toString());
+        int girlLifetime = 900 + world.rand.nextInt(1201);
         girl.getEntityData().setInteger("unknown_masked_girl_age", 0);
-        girl.getEntityData().setInteger("unknown_masked_girl_lifetime", 900 + world.rand.nextInt(1201));
+        girl.getEntityData().setInteger("unknown_masked_girl_lifetime", girlLifetime);
+        girl.getEntityData().setLong(GIRL_EXPIRES_TAG, world.getTotalWorldTime() + girlLifetime);
         girl.getEntityData().setInteger("unknown_masked_girl_look_ticks", 0);
         girl.getEntityData().setInteger("unknown_masked_girl_attack_state", 0);
         girl.getEntityData().setInteger("unknown_masked_girl_attack_cooldown", 1200);
@@ -441,6 +445,7 @@ public class MaskedGirlAtmosphereHandler {
                             || block == Blocks.BEDROCK || block == Blocks.BARRIER
                             || block == Blocks.COMMAND_BLOCK || block == Blocks.CHAIN_COMMAND_BLOCK
                             || block == Blocks.REPEATING_COMMAND_BLOCK) continue;
+                    if (block.getBlockHardness(state, world, pos) < 0.0F) continue;
                     if (block.hasTileEntity(state)) continue;
                     if (pos.distanceSq(player.getPosition()) < 9.0D) continue;
                     candidates.add(pos);
@@ -488,8 +493,11 @@ public class MaskedGirlAtmosphereHandler {
             facePlayer(observer, player);
             observer.getEntityData().setBoolean(OBSERVER_TAG, true);
             observer.getEntityData().setString(OBSERVER_OWNER_TAG, player.getUniqueID().toString());
+            int observerLifetime = 700 + world.rand.nextInt(700);
             observer.getEntityData().setInteger(OBSERVER_AGE_TAG, 0);
-            observer.getEntityData().setInteger(OBSERVER_LIFE_TAG, 700 + world.rand.nextInt(700));
+            observer.getEntityData().setInteger(OBSERVER_LIFE_TAG, observerLifetime);
+            observer.getEntityData().setLong(OBSERVER_EXPIRES_TAG,
+                    world.getTotalWorldTime() + observerLifetime);
             if (world.spawnEntity(observer)) nearby++;
         }
     }
@@ -501,13 +509,19 @@ public class MaskedGirlAtmosphereHandler {
 
         int age = entity.getEntityData().getInteger(OBSERVER_AGE_TAG) + 1;
         entity.getEntityData().setInteger(OBSERVER_AGE_TAG, age);
-        if (age >= entity.getEntityData().getInteger(OBSERVER_LIFE_TAG)) {
+        long expiresAt = entity.getEntityData().getLong(OBSERVER_EXPIRES_TAG);
+        if ((expiresAt > 0L && entity.world.getTotalWorldTime() >= expiresAt)
+                || age >= entity.getEntityData().getInteger(OBSERVER_LIFE_TAG)) {
             entity.setDead();
             return;
         }
 
         String ownerId = entity.getEntityData().getString(OBSERVER_OWNER_TAG);
         for (EntityPlayer player : entity.world.playerEntities) {
+            if (player.getEntityData().getInteger(HAUNTING_TICKS) <= 0) {
+                entity.setDead();
+                return;
+            }
             if (ownerId.equals(player.getUniqueID().toString())) {
                 facePlayer(entity, player);
                 return;
