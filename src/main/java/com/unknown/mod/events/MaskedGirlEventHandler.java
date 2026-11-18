@@ -141,56 +141,61 @@ public class MaskedGirlEventHandler {
         }
         int stage = worldData.getStage();
         if (stage < 3) {
-            // While observing the player, keep her head and body oriented toward them.
+            // Stages I-II are strictly observational: she never wanders or chases.
+            girl.setNoAI(true);
+            girl.getNavigator().clearPath();
             girl.faceEntity(owner, 10.0F, 10.0F);
 
-            if (girl.getDistance(owner) < 9.0F) {
-                vanishWithSound(girl);
-                return;
-            }
-
-            // Before the final stage, being noticed is enough to make her vanish.
-            if (isPlayerLookingAt(owner, girl)) {
+            if (girl.getDistance(owner) < 9.0F || isPlayerLookingAt(owner, girl)) {
                 vanishWithSound(girl);
             }
             return;
         }
 
-        // Stage III: stare briefly, then pursue for 40-60 in-game seconds.
+        // Stage III: she roams between attacks, pauses to stare, then actively hunts.
         girl.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
         int state = girl.getEntityData().getInteger(ATTACK_STATE_TAG);
         int cooldown = girl.getEntityData().getInteger(ATTACK_COOLDOWN_TAG);
         if (state == 0) {
+            girl.setNoAI(false);
             girl.setAttackTarget(null);
             if (cooldown > 0) {
                 girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, cooldown - 1);
-                girl.faceEntity(owner, 4.0F, 4.0F);
+                if (girl.ticksExisted % 30 == 0) girl.faceEntity(owner, 8.0F, 8.0F);
                 return;
             }
-            girl.getEntityData().setInteger(ATTACK_STATE_TAG, 1);
-            girl.getEntityData().setInteger(STARE_TIMER_TAG, 60 + girl.world.rand.nextInt(61));
-            girl.getEntityData().setInteger(ATTACK_TIMER_TAG, 800 + girl.world.rand.nextInt(401));
+            girl.setNoAI(true);
             girl.getNavigator().clearPath();
+            girl.getEntityData().setInteger(ATTACK_STATE_TAG, 1);
+            girl.getEntityData().setInteger(STARE_TIMER_TAG, 30 + girl.world.rand.nextInt(31));
+            girl.getEntityData().setInteger(ATTACK_TIMER_TAG, 300 + girl.world.rand.nextInt(201));
+            girl.faceEntity(owner, 10.0F, 10.0F);
             return;
         }
         if (state == 1) {
+            girl.setNoAI(true);
             girl.setAttackTarget(null);
-            girl.faceEntity(owner, 6.0F, 6.0F);
+            girl.faceEntity(owner, 10.0F, 10.0F);
             int stare = girl.getEntityData().getInteger(STARE_TIMER_TAG) - 1;
             girl.getEntityData().setInteger(STARE_TIMER_TAG, stare);
-            if (stare <= 0) girl.getEntityData().setInteger(ATTACK_STATE_TAG, 2);
+            if (stare <= 0) {
+                girl.setNoAI(false);
+                girl.getEntityData().setInteger(ATTACK_STATE_TAG, 2);
+            }
             return;
         }
+
+        girl.setNoAI(false);
         int attackTime = girl.getEntityData().getInteger(ATTACK_TIMER_TAG) - 1;
         girl.getEntityData().setInteger(ATTACK_TIMER_TAG, attackTime);
         girl.setAttackTarget(owner);
-        girl.getNavigator().tryMoveToEntityLiving(owner, 1.15D);
+        girl.getNavigator().tryMoveToEntityLiving(owner, 1.45D);
         girl.faceEntity(owner, 30.0F, 30.0F);
         if (attackTime <= 0) {
             girl.setAttackTarget(null);
             girl.getNavigator().clearPath();
             girl.getEntityData().setInteger(ATTACK_STATE_TAG, 0);
-            girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, 1200 + girl.world.rand.nextInt(2401));
+            girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, 500 + girl.world.rand.nextInt(701));
         }
     }
 
@@ -465,9 +470,10 @@ public class MaskedGirlEventHandler {
         girl.rotationYaw = yaw;
         girl.prevRotationYaw = yaw;
 
-        if (stage >= 2 || world.rand.nextBoolean()) {
+        if (stage >= 3) {
             girl.setHeldItem(net.minecraft.util.EnumHand.MAIN_HAND, new ItemStack(Items.IRON_SWORD));
         }
+        girl.setNoAI(stage < 3);
 
         girl.getEntityData().setBoolean(GIRL_TAG, true);
         girl.getEntityData().setString(OWNER_TAG, player.getUniqueID().toString());
@@ -477,11 +483,12 @@ public class MaskedGirlEventHandler {
         girl.getEntityData().setLong(EXPIRES_AT_TAG, world.getTotalWorldTime() + lifetime);
         girl.getEntityData().setInteger(LOOK_TICKS_TAG, 0);
         girl.getEntityData().setInteger(ATTACK_STATE_TAG, 0);
-        girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, 600 + world.rand.nextInt(1201));
+        girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, stage >= 3 ? 160 + world.rand.nextInt(241) : 600 + world.rand.nextInt(1201));
 
         boolean spawned = world.spawnEntity(girl);
         if (spawned) {
             player.getEntityData().setLong(ACTIVE_UNTIL_TAG, world.getTotalWorldTime() + lifetime);
+            if (stage >= 3) playStageThreeArrival(girl);
         }
         if (spawned && stage < 3 && girl.getDistance(player) <= 12.0D
                 && world.rand.nextInt(3) != 0) {
@@ -489,6 +496,21 @@ public class MaskedGirlEventHandler {
                     SoundCategory.HOSTILE, 0.85F, 0.65F + world.rand.nextFloat() * 0.15F);
         }
         return spawned;
+    }
+
+    /** A distorted record-11 cue marks every stage-III appearance. */
+    private void playStageThreeArrival(EntityMaskedGirl girl) {
+        World world = girl.world;
+        float pitch = 0.55F + world.rand.nextFloat() * 0.9F;
+        world.playSound(null, girl.getPosition(), SoundEvents.RECORD_11,
+                SoundCategory.RECORDS, 0.9F, pitch);
+
+        if (world.rand.nextBoolean()) {
+            net.minecraft.util.SoundEvent cue = world.rand.nextBoolean()
+                    ? SoundEvents.ENTITY_ENDERMEN_STARE : SoundEvents.ENTITY_WITCH_AMBIENT;
+            world.playSound(null, girl.getPosition(), cue, SoundCategory.HOSTILE,
+                    0.55F, 0.55F + world.rand.nextFloat() * 0.35F);
+        }
     }
 
     private void vanishWithSound(EntityMaskedGirl girl) {
