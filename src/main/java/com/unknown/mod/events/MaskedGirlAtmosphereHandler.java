@@ -228,6 +228,7 @@ public class MaskedGirlAtmosphereHandler {
 
         BlockPos pos = findRememberedPosition(player, min, max);
         if (pos == null) pos = findWindowPosition(player, min, max);
+        if (pos == null && world.rand.nextInt(100) < 55) pos = findNaturalPosition(player, min, max, true);
         if (pos == null) pos = findCoveredPosition(player, min, max);
         if (pos == null) pos = findNaturalPosition(player, min, max,
                 player.getEntityData().getInteger(FOREST_TAG) > 500);
@@ -278,6 +279,46 @@ public class MaskedGirlAtmosphereHandler {
         for (Entity entity : player.world.loadedEntityList) {
             if (entity instanceof EntityMaskedGirl && entity.getEntityData().getBoolean(GIRL_TAG)
                     && owner.equals(entity.getEntityData().getString(OWNER_TAG))) return true;
+        }
+        return false;
+    }
+
+    /** Finds a visible but partially sheltered position beside trees or structures. */
+    private BlockPos findPeekingPosition(EntityPlayer player, double min, double max) {
+        World world = player.world;
+        for (int attempt = 0; attempt < 80; attempt++) {
+            double angle = world.rand.nextDouble() * Math.PI * 2.0D;
+            double distance = min + world.rand.nextDouble() * (max - min);
+            BlockPos column = new BlockPos(
+                    (int) Math.floor(player.posX + Math.cos(angle) * distance),
+                    (int) player.posY,
+                    (int) Math.floor(player.posZ + Math.sin(angle) * distance));
+            if (!world.isBlockLoaded(column)) continue;
+            BlockPos candidate = world.getTopSolidOrLiquidBlock(column);
+            if (!isSafeSpawn(player, candidate, min, max) || !hasNearbyCover(world, candidate)) continue;
+            Vec3d eyes = player.getPositionEyes(1.0F);
+            Vec3d target = new Vec3d(candidate.getX() + 0.5D,
+                    candidate.getY() + 0.9D, candidate.getZ() + 0.5D);
+            if (world.rayTraceBlocks(eyes, target) == null) return candidate;
+        }
+        return null;
+    }
+
+    private boolean hasNearbyCover(World world, BlockPos center) {
+        for (int x = -2; x <= 2; x++) {
+            for (int y = -1; y <= 3; y++) {
+                for (int z = -2; z <= 2; z++) {
+                    if (x == 0 && z == 0) continue;
+                    BlockPos pos = center.add(x, y, z);
+                    if (!world.isBlockLoaded(pos)) continue;
+                    Block block = world.getBlockState(pos).getBlock();
+                    if (block == Blocks.LOG || block == Blocks.LOG2
+                            || block == Blocks.LEAVES || block == Blocks.LEAVES2
+                            || block == Blocks.PLANKS || block == Blocks.COBBLESTONE
+                            || block == Blocks.STONE || block == Blocks.STONEBRICK
+                            || block == Blocks.BRICK_BLOCK) return true;
+                }
+            }
         }
         return false;
     }
