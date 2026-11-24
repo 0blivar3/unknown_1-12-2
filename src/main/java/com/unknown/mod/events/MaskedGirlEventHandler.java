@@ -61,6 +61,9 @@ public class MaskedGirlEventHandler {
     private static final String HIT_COOLDOWN_TAG = "unknown_masked_girl_hit_cooldown";
     private static final String LOOK_REACTION_TAG = "unknown_masked_girl_look_reaction";
     private static final String LOOK_REACTION_TIMER_TAG = "unknown_masked_girl_look_reaction_timer";
+    private static final String APPROACH_TICKS_TAG = "unknown_masked_girl_approach_ticks";
+    private static final String LAST_PLAYER_X_TAG = "unknown_masked_girl_last_player_x";
+    private static final String LAST_PLAYER_Z_TAG = "unknown_masked_girl_last_player_z";
     private static final String[][] THREAT_MESSAGES = {
             {"I HEARD YOU", "BEFORE YOU", "ARRIVED", ""},
             {"THEY KNOW", "YOU ARE HERE", "", ""},
@@ -158,15 +161,18 @@ public class MaskedGirlEventHandler {
             return;
         }
         int stage = worldData.getStage();
+        updatePlayerApproachTracking(girl, owner);
         if (stage < 3) {
             // Stages I-II are strictly observational: she never wanders or chases.
             girl.setNoAI(true);
             girl.getNavigator().clearPath();
             girl.faceEntity(owner, 10.0F, 10.0F);
 
-            if (girl.getDistance(owner) < 9.0F || isPlayerLookingAt(owner, girl)) {
-                vanishWithSound(girl);
+            if (girl.getDistance(owner) < 9.0F) {
+                if (!relocateBehindObstacle(girl, owner)) vanishWithSound(girl);
+                return;
             }
+            if (isPlayerLookingAt(owner, girl)) vanishWithSound(girl);
             return;
         }
 
@@ -174,6 +180,18 @@ public class MaskedGirlEventHandler {
         // The outcome is rolled once per appearance, so looking at her cannot reroll it.
         boolean playerSpottedHer = isPlayerLookingAt(owner, girl);
         int lookReaction = girl.getEntityData().getInteger(LOOK_REACTION_TAG);
+        double playerDistance = girl.getDistance(owner);
+        int approachTicks = girl.getEntityData().getInteger(APPROACH_TICKS_TAG);
+        if (lookReaction == 0 && approachTicks >= 10 && playerDistance < 22.0D
+                && !playerSpottedHer && girl.getEntityData().getInteger(ATTACK_STATE_TAG) == 0) {
+            if (!relocateBehindObstacle(girl, owner)) vanishWithSound(girl);
+            return;
+        }
+        if (lookReaction == 0 && playerDistance < 8.0D
+                && girl.getEntityData().getInteger(ATTACK_STATE_TAG) == 0) {
+            if (!relocateBehindObstacle(girl, owner)) vanishWithSound(girl);
+            return;
+        }
         if (lookReaction == 1) {
             int reactionTimer = girl.getEntityData().getInteger(LOOK_REACTION_TIMER_TAG) - 1;
             girl.getEntityData().setInteger(LOOK_REACTION_TIMER_TAG, reactionTimer);
@@ -508,9 +526,11 @@ public class MaskedGirlEventHandler {
 
     private boolean spawnGirl(EntityPlayer player, int stage) {
         World world = player.world;
-        double minDistance = stage >= 3 ? 22.0D : (stage == 2 ? 10.0D : 12.0D);
-        double maxDistance = stage >= 3 ? 45.0D : (stage == 2 ? 24.0D : 30.0D);
-        BlockPos pos = findSafePosition(player, minDistance, maxDistance, stage < 3);
+        boolean closeFinalAppearance = stage >= 3 && world.rand.nextInt(100) < 18;
+        double minDistance = stage >= 3 ? (closeFinalAppearance ? 8.0D : 22.0D) : (stage == 2 ? 10.0D : 12.0D);
+        double maxDistance = stage >= 3 ? (closeFinalAppearance ? 17.0D : 45.0D) : (stage == 2 ? 24.0D : 30.0D);
+        BlockPos pos = findCoveredPosition(player, minDistance, maxDistance);
+        if (pos == null) pos = findSafePosition(player, minDistance, maxDistance, true);
         if (pos == null) return false;
 
         EntityMaskedGirl girl = new EntityMaskedGirl(world);
@@ -632,6 +652,49 @@ public class MaskedGirlEventHandler {
             return true;
         }
         return false;
+    }
+
+    /** Tracks deliberate movement toward her, rather than ordinary camera movement. */
+    private void updatePlayerApproachTracking(EntityMaskedGirl girl, EntityPlayer player) {
+        double x = player.posX;
+        double z = player.posZ;
+        if (!girl.getEntityData().hasKey(LAST_PLAYER_X_TAG)) {
+            girl.getEntityData().setDouble(LAST_PLAYER_X_TAG, x);
+            girl.getEntityData().setDouble(LAST_PLAYER_Z_TAG, z);
+            return;
+        }
+
+        double moveX = x - girl.getEntityData().getDouble(LAST_PLAYER_X_TAG);
+        double moveZ = z - girl.getEntityData().getDouble(LAST_PLAYER_Z_TAG);
+        girl.getEntityData().setDouble(LAST_PLAYER_X_TAG, x);
+        girl.getEntityData().setDouble(LAST_PLAYER_Z_TAG, z);
+
+        double moveLength = Math.sqrt(moveX * moveX + moveZ * moveZ);
+        double toGirlX = girl.posX - x;
+        double toGirlZ = girl.posZ - z;
+        double toGirlLength = Math.sqrt(toGirlX * toGirlX + toGirlZ * toGirlZ);
+        boolean approaching = moveLength > 0.035D && toGirlLength > 0.001D
+                && (moveX * toGirlX + moveZ * toGirlZ) / (moveLength * toGirlLength) > 0.68D;
+        int ticks = girl.getEntityData().getInteger(APPROACH_TICKS_TAG);
+        girl.getEntityData().setInteger(APPROACH_TICKS_TAG,
+                approaching ? Math.min(20, ticks + 1) : Math.max(0, ticks - 2));
+    }
+
+    /**
+     * Prefer a safe position with a solid block between the player and her.
+     * Repeated samples avoid choosing the same exposed spot for every appearance.
+     */
+    private BlockPos findCoveredPosition(EntityPlayer player, double minDistance, double maxDistance) {
+        World world = player.world;
+        Vec3d eyes = player.getPositionEyes(1.0F);
+        for (int attempt = 0; attempt < 10; attempt++) {
+            BlockPos candidate = findSafePosition(player, minDistance, maxDistance, true);
+            if (candidate == null) return null;
+            Vec3d target = new Vec3d(candidate.getX() + 0.5D,
+                    candidate.getY() + 0.9D, candidate.getZ() + 0.5D);
+            if (world.rayTraceBlocks(eyes, target) != null) return candidate;
+        }
+        return null;
     }
 
     private void faceEntityTowardPlayer(EntityMaskedGirl girl, EntityPlayer player) {
