@@ -228,6 +228,7 @@ public class MaskedGirlAtmosphereHandler {
 
         BlockPos pos = findRememberedPosition(player, min, max);
         if (pos == null) pos = findWindowPosition(player, min, max);
+        if (pos == null) pos = findCoveredPosition(player, min, max);
         if (pos == null) pos = findNaturalPosition(player, min, max,
                 player.getEntityData().getInteger(FOREST_TAG) > 500);
         if (pos == null) return false;
@@ -279,6 +280,27 @@ public class MaskedGirlAtmosphereHandler {
                     && owner.equals(entity.getEntityData().getString(OWNER_TAG))) return true;
         }
         return false;
+    }
+
+    /** Finds a rear-hemisphere spawn with terrain or a structure obscuring the view. */
+    private BlockPos findCoveredPosition(EntityPlayer player, double min, double max) {
+        World world = player.world;
+        Vec3d eyes = player.getPositionEyes(1.0F);
+        for (int attempt = 0; attempt < 80; attempt++) {
+            double angle = world.rand.nextDouble() * Math.PI * 2.0D;
+            double distance = min + world.rand.nextDouble() * (max - min);
+            BlockPos column = new BlockPos(
+                    (int) Math.floor(player.posX + Math.cos(angle) * distance),
+                    (int) player.posY,
+                    (int) Math.floor(player.posZ + Math.sin(angle) * distance));
+            if (!world.isBlockLoaded(column)) continue;
+            BlockPos candidate = world.getTopSolidOrLiquidBlock(column);
+            if (!isSafeSpawn(player, candidate, min, max)) continue;
+            Vec3d target = new Vec3d(candidate.getX() + 0.5D,
+                    candidate.getY() + 0.9D, candidate.getZ() + 0.5D);
+            if (world.rayTraceBlocks(eyes, target) != null) return candidate;
+        }
+        return null;
     }
 
     private BlockPos findRememberedPosition(EntityPlayer player, double min, double max) {
