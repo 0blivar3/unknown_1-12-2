@@ -231,6 +231,12 @@ public class MaskedGirlEventHandler {
             if (cooldown > 0) {
                 girl.getEntityData().setInteger(ATTACK_COOLDOWN_TAG, cooldown - 1);
                 if (girl.ticksExisted % 30 == 0) girl.faceEntity(owner, 8.0F, 8.0F);
+                // During the final stage she occasionally repositions behind cover,
+                // quietly keeping pace without visibly walking after the player.
+                if (girl.ticksExisted % 100 == 0 && girl.getDistance(owner) > 24.0F
+                        && !playerSpottedHer && girl.world.rand.nextInt(5) == 0) {
+                    if (!relocateBehindObstacle(girl, owner)) vanishWithSound(girl);
+                }
                 return;
             }
             girl.setNoAI(true);
@@ -529,7 +535,8 @@ public class MaskedGirlEventHandler {
         boolean closeFinalAppearance = stage >= 3 && world.rand.nextInt(100) < 18;
         double minDistance = stage >= 3 ? (closeFinalAppearance ? 8.0D : 22.0D) : (stage == 2 ? 10.0D : 12.0D);
         double maxDistance = stage >= 3 ? (closeFinalAppearance ? 17.0D : 45.0D) : (stage == 2 ? 24.0D : 30.0D);
-        BlockPos pos = findCoveredPosition(player, minDistance, maxDistance);
+        BlockPos pos = findPeekingPosition(player, minDistance, maxDistance);
+        if (pos == null) pos = findCoveredPosition(player, minDistance, maxDistance);
         if (pos == null) pos = findSafePosition(player, minDistance, maxDistance, true);
         if (pos == null) return false;
 
@@ -678,6 +685,43 @@ public class MaskedGirlEventHandler {
         int ticks = girl.getEntityData().getInteger(APPROACH_TICKS_TAG);
         girl.getEntityData().setInteger(APPROACH_TICKS_TAG,
                 approaching ? Math.min(20, ticks + 1) : Math.max(0, ticks - 2));
+    }
+
+    /**
+     * Places her beside nearby foliage or a wall, so she can be caught at the
+     * edge of the player's view rather than standing in an open field.
+     */
+    private BlockPos findPeekingPosition(EntityPlayer player, double minDistance, double maxDistance) {
+        World world = player.world;
+        for (int attempt = 0; attempt < 12; attempt++) {
+            BlockPos candidate = findSafePosition(player, minDistance, maxDistance, true);
+            if (candidate == null) return null;
+            if (!hasNearbyCover(world, candidate)) continue;
+            Vec3d eyes = player.getPositionEyes(1.0F);
+            Vec3d target = new Vec3d(candidate.getX() + 0.5D,
+                    candidate.getY() + 0.9D, candidate.getZ() + 0.5D);
+            if (world.rayTraceBlocks(eyes, target) == null) return candidate;
+        }
+        return null;
+    }
+
+    private boolean hasNearbyCover(World world, BlockPos center) {
+        for (int x = -2; x <= 2; x++) {
+            for (int y = -1; y <= 3; y++) {
+                for (int z = -2; z <= 2; z++) {
+                    if (x == 0 && z == 0) continue;
+                    BlockPos pos = center.add(x, y, z);
+                    if (!world.isBlockLoaded(pos)) continue;
+                    net.minecraft.block.Block block = world.getBlockState(pos).getBlock();
+                    if (block == Blocks.LOG || block == Blocks.LOG2
+                            || block == Blocks.LEAVES || block == Blocks.LEAVES2
+                            || block == Blocks.PLANKS || block == Blocks.COBBLESTONE
+                            || block == Blocks.STONE || block == Blocks.STONEBRICK
+                            || block == Blocks.BRICK_BLOCK) return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
